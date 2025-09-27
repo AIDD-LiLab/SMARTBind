@@ -42,11 +42,12 @@ We thank the authors of following open-source packages and models: [RNA-FM](http
 
 ## Cite SMARTBind
 ```bibtex
-@article{,
-title={},
-author={},
-journal={bioRxiv},
-year={2025},
-publisher={Cold Spring Harbor Laboratory}
+@article {Jiang2025.09.24.678312,
+	author = {Jiang, Shiyu and Taghavi, Amirhossein and Wang, Tenghui and Meyer, Samantha M. and Childs-Disney, Jessica L. and Li, Chenglong and Disney, Mattew D. and Li, Yanjun},
+	title = {Small Molecule Approach to RNA Targeting Binder Discovery (SMARTBind) Using Deep Learning Without Structural Input},
+	year = {2025},
+	doi = {10.1101/2025.09.24.678312},
+	publisher = {Cold Spring Harbor Laboratory},
+	journal = {bioRxiv}
 }
 ```
