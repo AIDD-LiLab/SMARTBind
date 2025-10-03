@@ -19,7 +19,7 @@ conda activate SMARTBind_env
 ```
 
 ## Inference with SMARTBind
-Downloaded pretrained SMARTBind models from [Zenodo](https://zenodo.org/records/17197893). 
+Downloaded pretrained SMARTBind models from [Zenodo](https://zenodo.org/records/17254230). 
 An alternative way is to use `gdown` as follows if you are working in a server without browser access:
 ```bash
 mkdir SMARTBind_weight
