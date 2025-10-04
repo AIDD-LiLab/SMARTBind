@@ -33,11 +33,11 @@ Please refer to the `notebook/README.md` for the details of the inference with S
 notebooks.
 
 ## Acknowledgements
-We thank the authors of following open-source packages and models: [RNA-FM](https://github.com/ml4bio/RNA-FM), 
+We thank the authors for making the following packages, software, and models open-sourced and easy to implement: [RNA-FM](https://github.com/ml4bio/RNA-FM), 
 [BioPython](https://biopython.org/), [ProDy](http://prody.csb.pitt.edu/), 
 [Open Babel](https://openbabel.org/index.html), [RDKit](https://www.rdkit.org/), [RNA 3D Hub](http://rna.bgsu.edu/rna3dhub/),
 [DeepCoy](https://github.com/fimrie/DeepCoy), [RNA3DB](https://github.com/marcellszi/rna3db), [MMseqs2](https://github.com/soedinglab/MMseqs2),
-[PyTorch Lightning](https://www.pytorchlightning.ai/).
+[PyTorch Lightning](https://www.pytorchlightning.ai/), [AutoDock](https://github.com/ccsb-scripps/AutoDock-GPU), [rDock](https://rdock.github.io/).
 
 
 ## Cite SMARTBind
