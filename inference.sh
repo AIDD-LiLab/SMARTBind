@@ -1,6 +1,6 @@
 conda activate smartbind_prev
 
-python virtual_screening.py \
+python inference.py \
     --rna "GGCGUAUAUCCUUAAUGAUAUGGUUUAAGGGCAAUACAUAGAAACCACAAAUUUCUUACUGCGUC" \
     --smiles "notebook/ligand_library.txt" \
     --model_path "SMARTBind_weight" \
