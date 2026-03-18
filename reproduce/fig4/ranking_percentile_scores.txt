@@ -1,0 +1,102 @@
+For 9LKU_GMP, the rank is 17 out of 1000001
+Rank percentage: 0.0016999983000016998%
+
+For 9LKW_GUN, the rank is 2 out of 1000001
+Rank percentage: 0.0001999998000002%
+
+For 9LKC_GNG, the rank is 20 out of 1000001
+Rank percentage: 0.001999998000002%
+
+For 9LKF_GMP, the rank is 21 out of 1000001
+Rank percentage: 0.0020999979000021%
+
+For 9V4X_9QC, the rank is 474 out of 1000001
+Rank percentage: 0.047399952600047396%
+
+For 9V4Y_ANG, the rank is 3 out of 1000001
+Rank percentage: 0.0002999997000003%
+
+For 9HRO_TOY, the rank is 22076 out of 1000001
+Rank percentage: 2.2075977924022077%
+
+For 9IWF_XAN, the rank is 152 out of 1000001
+Rank percentage: 0.0151999848000152%
+
+For 9I9W_B2R, the rank is 4717 out of 1000001
+Rank percentage: 0.4716995283004717%
+
+For 8ZNQ_NAZ, the rank is 401000 out of 1000001
+Rank percentage: 40.0999599000401%
+
+For 9V4U_NPR, the rank is 162 out of 1000001
+Rank percentage: 0.0161999838000162%
+
+For 9LJN_GUN, the rank is 3 out of 1000001
+Rank percentage: 0.0002999997000003%
+
+For 9V50_A1LXN, the rank is 4 out of 1000001
+Rank percentage: 0.0003999996000004%
+
+For 9LKE_HPA, the rank is 11 out of 1000001
+Rank percentage: 0.0010999989000011%
+
+For 9IWG_XAN, the rank is 145 out of 1000001
+Rank percentage: 0.0144999855000145%
+
+For 9EC4_CTI, the rank is 2907 out of 1000001
+Rank percentage: 0.2906997093002907%
+
+For 9EBP_LUM, the rank is 20 out of 1000001
+Rank percentage: 0.001999998000002%
+
+For 9LKV_GNG, the rank is 13 out of 1000001
+Rank percentage: 0.0012999987000013%
+
+For 8K7W_2ZY, the rank is 218 out of 1000001
+Rank percentage: 0.0217999782000218%
+
+For 8T5O_TAC, the rank is 4112 out of 1000001
+Rank percentage: 0.41119958880041124%
+
+For 9MQS_5GP, the rank is 1517 out of 1000001
+Rank percentage: 0.15169984830015168%
+
+For 9MQT_A1BNU, the rank is 13765 out of 1000001
+Rank percentage: 1.3764986235013765%
+
+For 8ZAU_GUN, the rank is 1 out of 1000001
+Rank percentage: 9.99999000001e-05%
+
+For 8KED_GUN, the rank is 1 out of 1000001
+Rank percentage: 9.99999000001e-05%
+
+For 8KHH_GMP, the rank is 19 out of 1000001
+Rank percentage: 0.0018999981000019%
+
+For 8KEB_GNG, the rank is 12 out of 1000001
+Rank percentage: 0.0011999988000012%
+
+For 9FN2_SAH, the rank is 568668 out of 1000001
+Rank percentage: 56.86674313325687%
+
+For 9IOS_53D, the rank is 66 out of 1000001
+Rank percentage: 0.0065999934000066%
+
+For 9IO1_53D, the rank is 7 out of 1000001
+Rank percentage: 0.0006999993000006999%
+
+For 9IOR_53D, the rank is 11 out of 1000001
+Rank percentage: 0.0010999989000011%
+
+For 9IOU_53D, the rank is 7 out of 1000001
+Rank percentage: 0.0006999993000006999%
+
+For 9IO0_53D, the rank is 38 out of 1000001
+Rank percentage: 0.0037999962000038%
+
+For 8Z8Q_GNG, the rank is 167 out of 1000001
+Rank percentage: 0.0166999833000167%
+
+For 8SYK_TAC, the rank is 13134 out of 1000001
+Rank percentage: 1.3133986866013134%
+

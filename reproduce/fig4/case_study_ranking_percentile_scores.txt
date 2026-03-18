@@ -1,0 +1,15 @@
+For 9cpd, the rank is 1896 out of 1000001
+Rank percentage: 0.18959981040018958%
+
+For 9cpi, the rank is 14906 out of 1000001
+Rank percentage: 1.4905985094014906%
+
+For 9cpg, the rank is 384217 out of 1000001
+Rank percentage: 38.42166157833842%
+
+For 4tzx, the rank is 8 out of 1000001
+Rank percentage: 0.0007999992000008%
+
+For premir372, the rank is 31381 out of 1000001
+Rank percentage: 3.138096861903138%
+
