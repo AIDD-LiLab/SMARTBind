@@ -1,0 +1,12 @@
+# Construction of temporal test set
+
+### Introduction
+To construct a temporal test set of RNA–ligand complexes, we queried the RCSB PDB Bank using advanced search filters to select structures containing at least one distinct RNA entity and one non-polymer instance. From this initial pool, we applied additional filtering criteria: ligands were required to be small molecules (100–1000 Da), solvent molecules and metal ions were excluded, and only complexes containing RNA and the ligand of interest—with no DNA or protein chains—were retained. We further ensured that none of the RNA sequences overlapped with those in the Hariboss training set. For each retained complex, motif annotation was performed using RNA 3D Hub (https://rna.bgsu.edu/rna3dhub/) by identifying residues within 10 Å of the ligand to characterize local RNA 3D structural environments. For each complex, the canonical SMILES representation of the bound ligand was retrieved from the RCSB Chemical Component Dictionary via the RCSB REST API (https://data.rcsb.org/redoc/index.html#tag/Chemical-Component). Binding site ground truth labels were defined as RNA residues located within 10 Å of the ligand. The resulting temporal test set comprises 34 RNA–ligand complexes released between January 22, 2025, and November 26, 2025, providing a temporally independent benchmark for evaluating model generalization beyond the training data.
+
+### Similarity analysis
+To investigate potential data leakage and evaluation bias, we conducted both sequence- and structure-level homology analyses between the RNAs in the curated test set and those in the Hariboss training set. Pairwise RNA sequence similarity was quantified using MMseqs2 (v15.6f452) under default nucleotide alignment settings, with sequence identity defined as the fraction of identical nucleotides over aligned columns (fident). Structural similarity was assessed using RMalign v1.1 (http://www.rnabinding.com/RMalign/RMalign.html), evaluating both ligand-binding pockets—defined as RNA residues within 10 Å of the ligand—and the full RNA chain structures.
+
+We used the same RMalign scripts as in [structural split](https://github.com/AIDD-LiLab/SMARTBind-internal/tree/main/revision/data/RNA_structure_split). 
+The mmseqs2 scripts for pair-wise similarity calculation: `mmseq_cal.py`, and the generated result is in folder `verification_temporal_vs_train`.
+
+### Further information and analysis for the results in plots and statistics can be found in `analysis.ipynb`
