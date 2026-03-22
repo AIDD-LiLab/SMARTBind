@@ -1,5 +1,16 @@
 from torch.utils.data import Dataset, DataLoader
 import random
+import json
+from pathlib import Path
+
+
+def ligands_for_rna_chain(rna_smol_map, rna_chain):
+    out = []
+    for pair_list in rna_smol_map:
+        rna_list, lig_list = pair_list[0], pair_list[1]
+        if rna_chain in rna_list:
+            out.extend(lig_list)
+    return list(set(out))
 
 
 class RLDataset(Dataset):
@@ -8,25 +19,39 @@ class RLDataset(Dataset):
                  rna_sequences_names,
                  match_smols,
                  match_smols_names,
-                 match_pair_dict=None,
                  non_binding_index_list=None,
-                 decoyfinder_list=None,
-                 random_decoy_num=12,
+                 random_decoy_num=48,
+                 extra_decoy_num=24,
                  is_val=False,
                  replace_ratio=0.15,
                  augmentation_factor=3,
-                 replace_res_type=None
+                 replace_res_type=None,
+                 rna_smol_map=None
                  ):
         if non_binding_index_list is None:
             non_binding_index_list = []
         if replace_res_type is None:
             replace_res_type = ['R', 'Y', 'K', 'M', 'S', 'W', 'B', 'D', 'H', 'V', 'N', '-']
         self.rna_sequences = rna_sequences
-        self.match_smols = match_smols
+        self.match_smols = [(smol[0], smol[1]) for smol in match_smols]
+        self.match_decoy_aug_map = {}
+        for match_mol_name, match_mol, decoy_mol in match_smols:
+            if match_mol_name not in self.match_decoy_aug_map:
+                self.match_decoy_aug_map[match_mol_name] = decoy_mol
+        if rna_smol_map is not None:
+            self.rna_smol_map = rna_smol_map
+        else:
+            rna_smol_map_path = Path(__file__).resolve().parent / 'rna_smol_map.json'
+            with open(rna_smol_map_path, 'r') as f:
+                self.rna_smol_map = json.load(f)
+
         self.random_decoy_num = random_decoy_num
+        self.extra_decoy_num = extra_decoy_num
         # load decoy list from match_smol_list
-        self.decoy_list = match_smols.copy()
-        self.decoyfinder_list = decoyfinder_list
+        self.decoy_list = self.match_smols.copy()
+        # unique the decoy list by mol_name
+        self.decoy_list = list({smol[0]: smol for smol in self.decoy_list}.values())
+
         self.is_val = is_val
         self.rna_sequences_names = rna_sequences_names
         self.match_smols_names = match_smols_names
@@ -34,9 +59,7 @@ class RLDataset(Dataset):
         self.augmentation_factor = augmentation_factor
         self.replace_type = replace_res_type
         self.non_binding_index_list = non_binding_index_list
-        # make sure the decoy in not bind to the rna (when rna has multiple binding sites case)
-        self.match_dict = match_pair_dict
-
+        
     def __len__(self):
         return len(self.rna_sequences)
 
@@ -46,35 +69,26 @@ class RLDataset(Dataset):
         match_smol = self.match_smols[index]
         match_smol_name = self.match_smols_names[index]
         # get random decoy smiles from decoy list where number is random_decoy_num, and will not select match_smol
-        if self.decoyfinder_list is not None:
-            temp_decoy_list = self.decoyfinder_list[index].copy()
-        else:
-            temp_decoy_list = self.decoy_list.copy()
+        temp_decoy_list = self.decoy_list.copy()
 
-        if self.is_val is False and self.match_dict is not None:
-            decoy_list_removed = []
-            # remove decoy that bind to the rna from temp_decoy_list
-            for key, value in self.match_dict.items():
-                if key == rna_sequence_name:
-                    for val in value:
-                        # get index of i in self.match_smols_names
-                        removes_index_list = [i for i, x in enumerate(self.match_smols_names) if x == val]
-                        # remove those index from temp_decoy_list
-                        for i in removes_index_list:
-                            decoy_list_removed.append(self.decoy_list[i])
-
-            # decoy_list_removed = list(set(decoy_list_removed))
-            for i in decoy_list_removed:
-                while i in temp_decoy_list:
-                    temp_decoy_list.remove(i)
-
-        while match_smol in temp_decoy_list:
-            temp_decoy_list.remove(match_smol)
+        decoy_smols_filter = temp_decoy_list
+        rna_seq_id = rna_sequence[0]
+        match_rna_smols = ligands_for_rna_chain(self.rna_smol_map, rna_seq_id)
+        # remove match_rna_smols from decoy_smols
+        for smol in match_rna_smols:
+            decoy_smols_filter = [t for t in decoy_smols_filter if t[0] != smol]
 
         if self.is_val:
-            decoy_smols = temp_decoy_list
+            decoy_smols = [s[1] for s in decoy_smols_filter]
         else:
-            decoy_smols = random.sample(temp_decoy_list, self.random_decoy_num)
+            decoy_smols_total = random.sample(decoy_smols_filter, self.random_decoy_num+self.extra_decoy_num)
+            decoy_smols = decoy_smols_total[:self.random_decoy_num]
+            decoy_smols = [s[1] for s in decoy_smols]
+            decoy_smols_extra_fp = decoy_smols_total[self.random_decoy_num:]
+            for extra_fp in decoy_smols_extra_fp:
+                # random sample one augment decoy from the augment list
+                augment_smol = random.choice(self.match_decoy_aug_map[extra_fp[0]])
+                decoy_smols.append(augment_smol)
 
         if self.is_val:
             # return contact position list in list [0, 1, 0, 0, 1, 0, 0, 0, 0, 0]

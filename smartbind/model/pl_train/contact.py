@@ -1,23 +1,39 @@
 import io
 import os
 import pickle
-import time
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-import seaborn as sn
 import torch
 import wandb
 from PIL import Image
 from pytorch_lightning import LightningModule
 from pytorch_lightning import seed_everything
-from sklearn.metrics import auc, confusion_matrix, roc_curve
 from torch import nn
 
 from ..margin import MarginScheduledLossFunction, sigmoid_cosine_distance_test
 
 from ..RNAFM_pretrained import fm
+import json
+
+
+def rna_chain_for_ligand(rna_smol_map, ligand):
+    out = []
+    for pair_list in rna_smol_map:
+        rna_list, lig_list = pair_list[0], pair_list[1]
+        if ligand in lig_list:
+            out.extend(rna_list)
+    return list(set(out))
+
+def unique_rna(rna_sequences_as_decoy):
+    seen = set()
+    rna_sequences_as_decoy_uniq = []
+    for chain, seq in rna_sequences_as_decoy:
+        if seq not in seen:
+            seen.add(seq)
+            rna_sequences_as_decoy_uniq.append((chain, seq))
+    return rna_sequences_as_decoy_uniq
 
 
 class ContactPL(LightningModule):
@@ -38,9 +54,17 @@ class ContactPL(LightningModule):
                  model_save_folder: str = 'saved_model',
                  seed: int = 42,
                  vs_mode: bool = False,
+                 save_name: str = 'train_score',
+                 rna_smol_map: list = None,
                  ):
         super(ContactPL, self).__init__()
         seed_everything(seed)
+        if rna_smol_map is not None:
+            self.rna_smol_map = rna_smol_map
+        else:
+            rna_smol_map_path = Path(__file__).resolve().parent / 'rna_smol_map.json'
+            with open(rna_smol_map_path, 'r') as f:
+                self.rna_smol_map = json.load(f)
 
         self.automatic_optimization = False
         self.gradient_clip_val = gradient_clip_val
@@ -98,78 +122,100 @@ class ContactPL(LightningModule):
 
         self.epoch_train_loss_list = []
         self.validation_step_outputs = []
-        self.low_rank_pairs = []
         self.lowest_val_loss = np.inf
 
         if not vs_mode:
             self.model_path = (f'{root_path}/contact_training_result/fold_{str(fold_num)}/'
-                               f'{model_save_folder}-{time.strftime("%d%m%Y-%H%M%S")}')
+                               f'{model_save_folder}-{save_name}')
             if not os.path.exists(self.model_path):
                 os.makedirs(self.model_path)
             self.save_hyperparameters()
 
     def training_step(self, batch, batch_idx):
         rna_sequences, match_smols, decoy_smols_list, rna_sequences_names, match_smols_name, _ = batch
+        # Skip batch with only 1 sample to avoid BatchNorm error
+        if len(rna_sequences) <= 1:
+            return None
         rna_tokenized_list, token_embeddings_list = self._rna_processing(rna_sequences)
         backward_losses = []
+        
+        # Precompute all unique RNA embeddings outside the loop
+        all_unique_rna = unique_rna(rna_sequences)
+        all_decoy_rna_tokenized, _ = self._rna_processing(all_unique_rna)
+        # Create mapping: chain_id -> tokenized embedding
+        rna_chain_to_embedding = {
+            rna[0]: embedding 
+            for rna, embedding in zip(all_unique_rna, all_decoy_rna_tokenized)
+        }
 
-        for anchor_rna, match_smol, decoy_smols, token_embeddings \
-                in zip(rna_tokenized_list, match_smols, decoy_smols_list, token_embeddings_list):
+        for anchor_rna, match_smol, decoy_smols, token_embeddings in zip(
+                rna_tokenized_list, match_smols, decoy_smols_list, token_embeddings_list
+        ):
             smol_cts_losses = []
             rna_cts_losses = []
-            # add match_smol to the first position of decoy_smols in order to batch normalize
-            full_smols_list = [match_smol] + decoy_smols
+
+            full_smols_list = [match_smol[1]] + decoy_smols
             full_smol_tokenized_list, _ = self._smol_processing(full_smols_list)
             match_smol_tokenized = full_smol_tokenized_list[0]
             decoy_smol_tokenized_list = full_smol_tokenized_list[1:]
 
-            decoy_rna_tokenized_list = [rna_tokenized for rna_tokenized in rna_tokenized_list
-                                        if rna_tokenized is not anchor_rna]
-            for decoy_rna in decoy_rna_tokenized_list:
-                rna_cts_loss = self.contrastive_loss_fct(match_smol_tokenized.unsqueeze(dim=0),
-                                                         anchor_rna.squeeze(1),
-                                                         decoy_rna.squeeze(1))
-                rna_cts_losses.append(rna_cts_loss)
+            # Contrastive loss for RNA decoys - use precomputed embeddings
+            matched_pos_rna = rna_chain_for_ligand(self.rna_smol_map, match_smols_name)
+            for chain_id, decoy_rna in rna_chain_to_embedding.items():
+                if chain_id not in matched_pos_rna:
+                    rna_cts_loss = self.contrastive_loss_fct(
+                        match_smol_tokenized.unsqueeze(dim=0),
+                        anchor_rna.squeeze(1),
+                        decoy_rna.squeeze(1)
+                    )
+                    rna_cts_losses.append(rna_cts_loss)
 
+            # Contrastive loss for small molecule decoys
             for decoy_smol_tokenized in decoy_smol_tokenized_list:
-                smol_cts_loss = self.contrastive_loss_fct(anchor_rna.squeeze(1),
-                                                          match_smol_tokenized.unsqueeze(dim=0),
-                                                          decoy_smol_tokenized.unsqueeze(dim=0))
+                smol_cts_loss = self.contrastive_loss_fct(
+                    anchor_rna.squeeze(1),
+                    match_smol_tokenized.unsqueeze(dim=0),
+                    decoy_smol_tokenized.unsqueeze(dim=0)
+                )
                 smol_cts_losses.append(smol_cts_loss)
+            try:
+                this_avg_smol_cts_loss = torch.mean(torch.stack(smol_cts_losses))
+            except Exception as e:
+                this_avg_smol_cts_loss = torch.tensor(0.0, requires_grad=True).to(self.str_device)
+            try:
+                this_avg_rna_cts_loss = torch.mean(torch.stack(rna_cts_losses))
+            except Exception as e:
+                this_avg_rna_cts_loss = torch.tensor(0.0, requires_grad=True).to(self.str_device)
 
-            this_avg_smol_cts_loss = torch.mean(torch.stack(smol_cts_losses))
-            this_avg_rna_cts_loss = torch.mean(torch.stack(rna_cts_losses))
             this_joint_cts_loss = (this_avg_smol_cts_loss + this_avg_rna_cts_loss) / 2
             backward_losses.append(this_joint_cts_loss)
             self.epoch_train_loss_list.append(this_joint_cts_loss.item())
 
         avg_loss = torch.mean(torch.stack(backward_losses))
-
-        # manually optimize the model
+        # optimizers
         opt_rna_mlp, opt_smol_mlp, opt_rna_fm = self.optimizers()
-
+        # zero gradients
         opt_rna_mlp.zero_grad()
         opt_smol_mlp.zero_grad()
-        self.manual_backward(avg_loss, retain_graph=True)
+        if self.finetune_rna_fm:
+            opt_rna_fm.zero_grad()
+
+        # backward pass
+        self.manual_backward(avg_loss)
+        # gradient clipping
         if self.gradient_clip_val > 0:
             torch.nn.utils.clip_grad_norm_(self.rna_featurizer.parameters(), self.gradient_clip_val)
             torch.nn.utils.clip_grad_norm_(self.smol_featurizer.parameters(), self.gradient_clip_val)
+            if self.finetune_rna_fm:
+                torch.nn.utils.clip_grad_norm_(self.rna_fm_model.parameters(), self.gradient_clip_val)
+
+        # optimizer steps
         opt_rna_mlp.step()
         opt_smol_mlp.step()
-
-        # Update the foundation models
         if self.finetune_rna_fm:
-            multi_loss = avg_loss
-            if self.finetune_rna_fm:
-                opt_rna_fm.zero_grad()
+            opt_rna_fm.step()
 
-            self.manual_backward(multi_loss)
-            if self.gradient_clip_val > 0:
-                if self.finetune_rna_fm:
-                    torch.nn.utils.clip_grad_norm_(self.rna_fm_model.parameters(), self.gradient_clip_val)
-
-            if self.finetune_rna_fm:
-                opt_rna_fm.step()
+        return avg_loss
 
     def on_train_epoch_end(self) -> None:
         """
@@ -213,13 +259,22 @@ class ContactPL(LightningModule):
         epochs_val_rna_cts_loss = []
         rank_percentile_list = []
         positive_anchor_distance = []
+        
+        # Precompute all unique RNA embeddings outside the loop
+        all_unique_rna = unique_rna(rna_sequences)
+        all_decoy_rna_tokenized, _ = self._rna_processing(all_unique_rna)
+        # Create mapping: chain_id -> tokenized embedding
+        rna_chain_to_embedding = {
+            rna[0]: embedding 
+            for rna, embedding in zip(all_unique_rna, all_decoy_rna_tokenized)
+        }
 
         for anchor_rna, match_smol, decoy_smols, rna_sequence_name, match_smol_name, token_embeddings in \
                 zip(rna_tokenized_list, match_smols, decoy_smols_list, rna_sequences_names, match_smols_name, token_embeddings_list):
             smol_cts_losses = []
             rna_cts_losses = []
             anchor_rna = anchor_rna.squeeze(1)
-            match_smol_tokenized_list, _ = self._smol_processing([match_smol])
+            match_smol_tokenized_list, _ = self._smol_processing([match_smol[1]])
             match_smol_tokenized = match_smol_tokenized_list[0]
             decoy_smol_tokenized_list, _ = self._smol_processing(decoy_smols)
             decoy_distance_list = []
@@ -235,32 +290,32 @@ class ContactPL(LightningModule):
                                                                decoy_smol_tokenized)
                 smol_cts_losses.append(this_smol_cts_loss)
 
-            decoy_rna_tokenized_list = [rna_tokenized for rna_tokenized in rna_tokenized_list
-                                        if rna_tokenized is not anchor_rna]
-            for decoy_rna in decoy_rna_tokenized_list:
-                this_rna_cts_loss = self.contrastive_loss_fct(match_smol_tokenized,
-                                                              anchor_rna.squeeze(1),
-                                                              decoy_rna.squeeze(1))
-                rna_cts_losses.append(this_rna_cts_loss)
+            # Contrastive loss for RNA decoys - use precomputed embeddings
+            matched_pos_rna = rna_chain_for_ligand(self.rna_smol_map, match_smol_name)
+            for chain_id, decoy_rna in rna_chain_to_embedding.items():
+                if chain_id not in matched_pos_rna:
+                    this_rna_cts_loss = self.contrastive_loss_fct(match_smol_tokenized,
+                                                                  anchor_rna.squeeze(1),
+                                                                  decoy_rna.squeeze(1))
+                    rna_cts_losses.append(this_rna_cts_loss)
 
             this_avg_smol_cts_loss = torch.mean(torch.stack(smol_cts_losses))
             epochs_val_smol_cts_loss.append(this_avg_smol_cts_loss)
-            this_avg_rna_cts_loss = torch.mean(torch.stack(rna_cts_losses))
-            epochs_val_rna_cts_loss.append(this_avg_rna_cts_loss)
+            if len(rna_cts_losses) > 0:
+                this_avg_rna_cts_loss = torch.mean(torch.stack(rna_cts_losses))
+                epochs_val_rna_cts_loss.append(this_avg_rna_cts_loss)
 
             match_distance = sigmoid_cosine_distance_test(anchor_rna, match_smol_tokenized)
             positive_anchor_distance.append(match_distance)
             rank_percentile = self._rank_eval(match_distance, decoy_distance_list)
             rank_percentile_list.append(rank_percentile)
 
-            if rank_percentile <= 0.6:
-                self.low_rank_pairs.append(
-                    [rna_sequence_name, match_smol_name, rank_percentile, self.current_epoch]
-                )
-
         avg_val_smol_cts_loss = torch.mean(torch.stack(epochs_val_smol_cts_loss))
-        avg_val_rna_cts_loss = torch.mean(torch.stack(epochs_val_rna_cts_loss))
-        avg_val_loss = (avg_val_smol_cts_loss + avg_val_rna_cts_loss) / 2
+        if len(epochs_val_rna_cts_loss) > 0:
+            avg_val_rna_cts_loss = torch.mean(torch.stack(epochs_val_rna_cts_loss))
+            avg_val_loss = (avg_val_smol_cts_loss + avg_val_rna_cts_loss) / 2
+        else:
+            avg_val_loss = avg_val_smol_cts_loss
 
         self.validation_step_outputs.append({'val_loss': avg_val_loss,
                                              'rank_percentile_list': rank_percentile_list,
@@ -281,12 +336,6 @@ class ContactPL(LightningModule):
         self.logger.experiment.log({
             "avg_val_loss": avg_loss.item(),
         })
-
-        # log the low rank pairs into wandb as table
-        wandb_table_data = self.low_rank_pairs.copy()
-        columns = ["rna_sequence_name", "match_smol_name", "rank_percentile", "epoch"]
-        wandb_table = wandb.Table(data=wandb_table_data, columns=columns)
-        wandb.log({"low_rank_pairs": wandb_table})
 
         # save model weight if the validation loss is the lowest
         if avg_loss.item() < self.lowest_val_loss:
@@ -406,51 +455,6 @@ class ContactPL(LightningModule):
         pil_img = Image.open(buf)
         wandb.log({"validation/rank_box_plot": [wandb.Image(pil_img)]})
 
-    def _auc_plot2wandb(self, predictions, labels, is_train=False):
-        """
-        Plot AUC curve and log to wandb
-        """
-        fpr, tpr, thresholds = roc_curve(labels.cpu().numpy(), predictions.cpu().numpy())
-        auc_score = auc(fpr, tpr)
-        buf = io.BytesIO()
-        plt.plot(fpr, tpr, label='ROC curve (area = %0.2f)' % auc_score)
-        plt.plot([0, 1], [0, 1], 'k--')
-        plt.xlim([0.0, 1])
-        plt.ylim([0.0, 1.05])
-        plt.xlabel('False Positive Rate')
-        plt.ylabel('True Positive Rate')
-        plt.title(f'ROC curve with AUC score {auc_score}')
-        plt.legend(loc="lower right")
-        plt.savefig(buf, format='png')
-        plt.close()
-        buf.seek(0)
-        pil_img = Image.open(buf)
-        if is_train:
-            wandb.log({"roc_curve": [wandb.Image(pil_img)]})
-        else:
-            wandb.log({"validation/roc_curve": [wandb.Image(pil_img)]})
-
-    def _confusion_matrix_plot2wandb(self, predictions, labels, is_train=False):
-        """
-        Plot confusion matrix and log to wandb
-        """
-        buf = io.BytesIO()
-        cm = confusion_matrix(labels.cpu().numpy(), predictions.cpu().numpy())
-        df_cm = pd.DataFrame(cm, index=[i for i in "01"], columns=[i for i in "01"])
-        plt.figure(figsize=(10, 7))
-        sn.heatmap(df_cm, annot=True)
-        plt.title(f'Confusion matrix')
-        plt.xlabel('Predicted label')
-        plt.ylabel('True label')
-        plt.savefig(buf, format='png')
-        plt.close()
-        buf.seek(0)
-        pil_img = Image.open(buf)
-        if is_train:
-            wandb.log({"confusion_matrix": [wandb.Image(pil_img)]})
-        else:
-            wandb.log({"validation/confusion_matrix": [wandb.Image(pil_img)]})
-
     def _rank_eval(self, match_distance, decoy_distance_list):
         """
         Calculate the rank percentile of the match distance among the decoy distance list
@@ -523,92 +527,6 @@ class ContactPL(LightningModule):
         if len(not_loaded) > 0:
             print(f"Params not loaded: {not_loaded} from current model")
 
-    def inference(self, data_loader, save_path='./', fold_num=1):
-        """
-        Inference the model with a single RNA sequence and a single match small molecule from data loader
-
-        Args:
-            data_loader: a data loader for inference
-
-        Returns:
-            low_rank_pairs: dictionary of pairs and their rank percentile
-            rank_dict: dictionary of pairs and their rank percentile
-        """
-        # set the model to evaluation mode
-        self.eval()
-
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
-
-        rank_dict = {}
-        all_cosine_similarity = {}  # include positive and negative samples
-        all_embeddings = {}  # include positive and negative samples
-        # iterate batches from data loader, without loss calculation
-        for batch in data_loader:
-            rna_sequences, match_smols, decoy_smols_list, rna_sequences_names, match_smols_name, contact_index_list = batch
-            rna_tokenized_list, token_embeddings_list = self._rna_processing(rna_sequences)
-            for anchor_rna, match_smol, decoy_smols, rna_sequence_name, match_smol_name, token_embeddings, contact_index, rna_sequence in \
-                    zip(rna_tokenized_list, match_smols, decoy_smols_list, rna_sequences_names, match_smols_name, token_embeddings_list, contact_index_list, rna_sequences):
-                if len(decoy_smols) == 0:
-                    continue
-
-                anchor_rna = anchor_rna.squeeze(1)
-                match_smol_tokenized_list, _ = self._smol_processing([match_smol])
-                match_smol_tokenized = match_smol_tokenized_list[0]
-
-                decoy_smol_tokenized_list, _ = self._smol_processing(decoy_smols)
-                decoy_distance_list = []
-                match_smol_tokenized = match_smol_tokenized.unsqueeze(dim=0)
-                match_distance = sigmoid_cosine_distance_test(anchor_rna, match_smol_tokenized)
-                for decoy_smol_tokenized in decoy_smol_tokenized_list:
-                    decoy_smol_tokenized = decoy_smol_tokenized.unsqueeze(dim=0)
-                    decoy_distance = sigmoid_cosine_distance_test(anchor_rna,
-                                                                  decoy_smol_tokenized)
-                    decoy_distance_list.append(decoy_distance)
-
-                rank_percentile = self._rank_eval(match_distance, decoy_distance_list)
-                rank_dict[(f'{rna_sequence[0]}_{match_smol_name}', match_smol_name)] = rank_percentile
-
-                all_cosine_similarity[f'{rna_sequence[0]}_{match_smol_name}'] = {
-                    'positive_pair': match_distance.item(),
-                    'negative_pair': []
-                }
-                all_embeddings[f'{rna_sequence[0]}_{match_smol_name}'] = {
-                    'rna_anchor': anchor_rna.detach().numpy(),
-                    'rna_anchor_name': rna_sequence_name,
-                    'positive_smol': match_smol_tokenized.detach().numpy(),
-                    'positive_name': match_smol_name,
-                    'negative_smol': []
-                }
-
-                for decoy_smol_tokenized in decoy_smol_tokenized_list:
-                    decoy_smol_tokenized = decoy_smol_tokenized.unsqueeze(dim=0)
-                    decoy_distance = sigmoid_cosine_distance_test(anchor_rna.squeeze(1),
-                                                                  decoy_smol_tokenized)
-                    decoy_distance_list.append(decoy_distance)
-                    all_cosine_similarity[f'{rna_sequence[0]}_{match_smol_name}']['negative_pair'].append(decoy_distance.item())
-                    all_embeddings[f'{rna_sequence[0]}_{match_smol_name}']['negative_smol'].append(decoy_smol_tokenized.detach().numpy())
-
-        # save the rank_dict to local as pkl
-        with open(save_path + f'/rank_dict_fold{fold_num}.pkl', 'wb') as f:
-            pickle.dump(rank_dict, f)
-        with open(save_path + f'/cosine_similarity_fold{fold_num}.pkl', 'wb') as f:
-            pickle.dump(all_cosine_similarity, f)
-        with open(save_path + f'/embeddings_fold{fold_num}.pkl', 'wb') as f:
-            pickle.dump(all_embeddings, f)
-        return rank_dict, all_cosine_similarity, all_embeddings
-
-    def inference_single_smol(self, smol_fp2):
-        """
-        Inference the model with a single small molecule
-        :param smol_fp2:
-        :return:
-        """
-        self.eval()
-        smol_tokenized_list, _ = self._smol_processing([smol_fp2])
-        smol_tokenized = smol_tokenized_list[0]
-        return smol_tokenized
-
     def inference_list_smols(self, smol_fp2_list):
         """
         Inference the model with a list of small molecules
@@ -629,72 +547,3 @@ class ContactPL(LightningModule):
         rna_tokenized_list, token_embeddings_list = self._rna_processing([('s', rna_sequence)])
         rna_tokenized = rna_tokenized_list[0]
         return rna_tokenized
-
-    def inference_known_match(self, data_loader, save_path='./', save_name='rank_box_plot.png'):
-        """
-        Inference the model with a single RNA sequence and a single match small molecule from data loader
-
-        Args:
-            data_loader: a data loader for inference
-
-        Returns:
-            low_rank_pairs: dictionary of pairs and their rank percentile
-            rank_dict: dictionary of pairs and their rank percentile
-        """
-        # set the model to evaluation mode
-        self.eval()
-
-        low_rank_pairs = {}
-        # rank_dict = {}
-        rank_list = []
-        # iterate batches from data loader
-        for batch in data_loader:
-            rna_sequences, match_smols, decoy_smols_list, rna_sequences_names, match_smols_name, contact_index_list = batch
-            rna_tokenized_list, token_embeddings_list = self._rna_processing(rna_sequences)
-
-            for anchor_rna, match_smol, decoy_smols, rna_sequence_name, match_smol_name, token_embeddings, contact_index in \
-                    zip(rna_tokenized_list, match_smols, decoy_smols_list, rna_sequences_names, match_smols_name, token_embeddings_list, contact_index_list):
-                anchor_rna = anchor_rna.squeeze(1).to(self.str_device)
-                match_smol_tokenized_list, _ = self._smol_processing([match_smol])
-                match_smol_tokenized = match_smol_tokenized_list[0]
-
-                decoy_smol_tokenized_list, _ = self._smol_processing(decoy_smols)
-                decoy_distance_list = []
-                for decoy_smol_tokenized in decoy_smol_tokenized_list:
-                    decoy_distance = sigmoid_cosine_distance_test(anchor_rna, decoy_smol_tokenized)
-                    decoy_distance_list.append(decoy_distance)
-
-                match_distance = sigmoid_cosine_distance_test(anchor_rna, match_smol_tokenized)
-                rank_percentile = self._rank_eval(match_distance, decoy_distance_list)
-                # rank_dict[(rna_sequence_name, match_smol_name)] = rank_percentile
-                rank_list.append(rank_percentile)
-                if rank_percentile <= 0.6:
-                    low_rank_pairs[(rna_sequence_name, match_smol_name)] = rank_percentile
-
-        # draw and save box plot without calling functions and save to local
-        # rank_list = list(rank_dict.values())
-        buf = io.BytesIO()
-        plt.boxplot(rank_list)
-        plt.axhline(y=sum(rank_list) / len(rank_list), color='r', linestyle='-')
-        plt.scatter([1] * len(rank_list), rank_list, alpha=0.5)
-        plt.text(1.1, sum(rank_list) / len(rank_list),
-                    f'mean={round(sum(rank_list) / len(rank_list), 4)}')
-        plt.text(1.1, sorted(rank_list)[len(rank_list) // 2],
-                    f'median={round(sorted(rank_list)[len(rank_list) // 2], 4)}')
-
-        plt.title(f'Rank percentile distribution with total {len(rank_list)} data points')
-        # save to path
-        plt.savefig(buf, format='png')
-        buf.seek(0)
-        pil_img = Image.open(buf)
-        pil_img.save(save_path + save_name)
-        buf.close()
-        plt.close()
-
-        print(f'Mean rank percentile: {sum(rank_list) / len(rank_list)}')
-        print(f'Median rank percentile: {sorted(rank_list)[len(rank_list) // 2]}')
-        # save rank_list
-        with open(save_path + save_name.split('.')[0] + '.pkl', 'wb') as f:
-            pickle.dump(rank_list, f)
-
-        return low_rank_pairs, rank_list

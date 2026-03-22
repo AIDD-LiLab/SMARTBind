@@ -5,7 +5,7 @@ from smartbind.model.pl_train.contact import ContactPL
 from smartbind.model.pl_train.binding import BindingPL
 from smartbind.utils import load_smartbind_models
 
-logger = logging.getLogger("SmartBind")
+logger = logging.getLogger("SMARTBind")
 
 if not logger.hasHandlers() or len(logger.handlers) == 0:
     logger.propagate = False

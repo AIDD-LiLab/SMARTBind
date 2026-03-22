@@ -6,28 +6,50 @@ import openbabel.pybel as pybel
 """
 Function to preprocess the dictionary data from the raw data
 """
+def build_rna_smol_map_from_raw_dict(raw_dict):
+    seq_to_chain_ids = {}
+    seq_to_ligands = {}
 
-def build_val_test_set(fold_num=0, dict_path=str):
+    for _, complexes in raw_dict.items():
+        for _, sample in complexes.items():
+            rna_seq = sample['rna_chain_sequence']
+            seq_id = f"{sample['pdb_id']}_{sample['rna_chain_id']}"
+            ligand_id = sample['ligand_id']
+
+            if rna_seq not in seq_to_chain_ids:
+                seq_to_chain_ids[rna_seq] = []
+            if rna_seq not in seq_to_ligands:
+                seq_to_ligands[rna_seq] = []
+
+            seq_to_chain_ids[rna_seq].append(seq_id)
+            seq_to_ligands[rna_seq].append(ligand_id)
+
+    seq_id_smol_map = []
+    for rna_seq, seq_id_list in seq_to_chain_ids.items():
+        unique_seq_ids = list(dict.fromkeys(seq_id_list))
+        unique_ligands = list(dict.fromkeys(seq_to_ligands[rna_seq]))
+        seq_id_smol_map.append((unique_seq_ids, unique_ligands))
+
+    return seq_id_smol_map
+
+
+def build_val_test_set(fold_num=0, dict_path=str, topk_decoy=100, return_rna_smol_map=False):
     raw_dict = load_dict(dict_path)
+    rna_smol_map = build_rna_smol_map_from_raw_dict(raw_dict)
 
     val_dict, train_dict = split_train_test(raw_dict, fold_num)
 
     val_rna_seq_list, val_match_smol_list, val_complex_id_list, val_match_smol_id_list, val_contact_index, \
-        val_match_smol_fp_list = parse_dict(val_dict)
+        val_match_smol_fp_list = parse_dict(val_dict, topk_decoy=topk_decoy)
     train_rna_seq_list, train_match_smol_list, train_complex_id_list, train_match_smol_id_list, train_contact_index, \
-        train_match_smol_fp_list = parse_dict(train_dict)
+        train_match_smol_fp_list = parse_dict(train_dict, topk_decoy=topk_decoy)
 
-    # build match pair dict: {}
-    match_pair_dict = {}
-    for i in range(len(train_complex_id_list)):
-        if train_complex_id_list[i] not in match_pair_dict:
-            match_pair_dict[train_complex_id_list[i]] = [train_match_smol_id_list[i]]
-        else:
-            match_pair_dict[train_complex_id_list[i]].append(train_match_smol_id_list[i])
-
-    return val_rna_seq_list, val_match_smol_list, val_complex_id_list, val_match_smol_id_list, val_contact_index, \
-        val_match_smol_fp_list, train_rna_seq_list, train_match_smol_list, train_complex_id_list, \
-        train_match_smol_id_list, train_contact_index, train_match_smol_fp_list, match_pair_dict
+    out = (val_rna_seq_list, val_match_smol_list, val_complex_id_list, val_match_smol_id_list, val_contact_index,
+           val_match_smol_fp_list, train_rna_seq_list, train_match_smol_list, train_complex_id_list,
+            train_match_smol_id_list, train_contact_index, train_match_smol_fp_list)
+    if return_rna_smol_map:
+        return out + (rna_smol_map,)
+    return out
 
 
 def load_dict(file_path):
@@ -50,7 +72,7 @@ def split_train_test(dict, fold_num):
     return test_dict, train_dict
 
 
-def parse_dict(dict):
+def parse_dict(dict, topk_decoy=100):
     """
     Decipher the dict to return lists:
     - rna sequence
@@ -65,7 +87,7 @@ def parse_dict(dict):
         rna_seq_list.append((f'{dict[key]["pdb_id"]}_{dict[key]["rna_chain_id"]}',
                              dict[key]['rna_chain_sequence']))
         match_smol_list.append(dict[key]['downloaded_ligand_smiles'])
-        match_smol_fp_list.append(dict[key]['download_fp2'])
+        match_smol_fp_list.append((dict[key]['ligand_id'], dict[key]['download_fp2'], dict[key]['decoy_smiles'][:topk_decoy]))
         complex_id_list.append(dict[key]['pdb_id'])
         match_smol_id_list.append(dict[key]['ligand_id'])
         contact_index.append(dict[key]['contact_map_1d'])

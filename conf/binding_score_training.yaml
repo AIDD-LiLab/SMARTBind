@@ -1,0 +1,36 @@
+training_params:
+  seed: 2
+  margin: 0.6
+  patience: 16
+  batch_size: 24
+  max_epochs: 200
+  mlp_dropout: 0.1
+  gradient_clip_val: 0.1
+  rna_fm_lr: 1e-5
+  rna_mlp_lr: 0.01
+  rna_mlp_weight_decay: 0.001
+  smol_mlp_lr: 0.01
+  smol_mlp_weight_decay: 0.001
+  model_save_folder: 'model_training'
+  device: 'cuda'
+
+model_params:
+  out_feature: 256
+
+data_params:
+  fold_num: 1
+  decoy_num: 48
+  extra_decoy_num: 24
+  topk_decoy: 100
+  data_aug_replace_ratio: 0.15
+  data_aug_factor: 3
+  num_workers: 2
+  training_data: "training_data/hariboss_merged_10fd_with_decoys.pkl"
+
+wandb_params:
+  key: 'wandb_api_key'
+  project: 'SmartBind-train'
+  task: 'smartbind-test'
+  entity: 'wandb_entity_name'
+  log_model: False
+  offline: False
