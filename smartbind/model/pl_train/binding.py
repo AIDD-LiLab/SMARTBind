@@ -149,7 +149,7 @@ class BindingPL(LightningModule):
         Training step for the binding site prediction model
         '''
         rna_sequences, match_smols, _, _, _, binding_index_list = batch
-        match_smol_tensor = torch.tensor(match_smols).to(self.str_device)
+        match_smol_tensor = torch.tensor([smol[1] for smol in match_smols]).to(self.str_device)
         match_smol_tensor = match_smol_tensor.float()
         smol_embeddings = self.smol_binding_featurizer(match_smol_tensor)
         token_embeddings_list, truncated_positions_list = self._rna_processing(rna_sequences=rna_sequences,
@@ -216,7 +216,7 @@ class BindingPL(LightningModule):
         rna_name_list = []
         for match_smol, token_embeddings, rna_names, binding_index in (
                 zip(match_smols, token_embeddings_list, rna_sequence_name, binding_index_list)):
-            match_smol_tensor = torch.tensor(match_smol).to(self.str_device)
+            match_smol_tensor = torch.tensor(match_smol[1]).to(self.str_device)
             match_smol_tensor = match_smol_tensor.float()
             smol_embeddings = self.smol_binding_featurizer(match_smol_tensor.unsqueeze(0))
 
@@ -247,19 +247,12 @@ class BindingPL(LightningModule):
         all_binding_map_loss = [x["epoch_val_binding_map_loss"] for x in self.validation_step_outputs]
         avg_binding_map_loss = torch.mean(torch.stack(all_binding_map_loss))
 
-        if_save = False
         if avg_binding_map_loss.item() < self.lowest_val_binding_loss:
-            if_save = True
             self.lowest_val_binding_loss = avg_binding_map_loss
             self.best_model = self.state_dict()
             # save the model and the mean rank percentiles
             torch.save(self.best_model, self.model_path + '/best_model_val_binding_loss.pth')
 
-        # calculate the binding map accuracy
-        self._auc_plot2wandb(prediction_list=[x["prediction"] for x in self.validation_step_outputs],
-                             label_list=[x["label"] for x in self.validation_step_outputs],
-                             rna_name_list=[x["rna_name"] for x in self.validation_step_outputs],
-                             save=if_save)
         self.validation_step_outputs.clear()
 
         self.log('avg_val_loss', avg_binding_map_loss.item())
@@ -454,13 +447,6 @@ class BindingPL(LightningModule):
                                       rna_sequence_embedding,
                                       match_smol_embedding,
                                       binding_index):
-        '''
-
-        :param rna_sequence_embedding:
-        :param match_smol_embedding:
-        :param binding_index:
-        :return:
-        '''
         self.binding_site_featurizer.to(self.str_device)
 
         if len(rna_sequence_embedding) <= 512:
@@ -493,71 +479,53 @@ class BindingPL(LightningModule):
             binding_index_tensor = torch.cat(binding_label_list, dim=0)
             return torch.mean(torch.stack(binding_map_loss_list)), binding_map_prediction, binding_index_tensor
 
-    def _draw_rank_box_plot(self, rank_list):
-        '''
-
-        :param rank_list:
-        :return:
-        '''
-        rank_list = [item for sublist in rank_list for item in sublist]
-
-        buf = io.BytesIO()
-        plt.boxplot(rank_list)
-        plt.axhline(y=sum(rank_list) / len(rank_list), color='r', linestyle='-')
-        plt.scatter([1] * len(rank_list), rank_list, alpha=0.5)
-        plt.text(1.1, sum(rank_list) / len(rank_list),
-                 f'mean={round(sum(rank_list) / len(rank_list), 4)}')
-        plt.text(1.1, sorted(rank_list)[len(rank_list) // 2],
-                 f'median={round(sorted(rank_list)[len(rank_list) // 2], 4)}')
-
-        plt.title(f'Rank percentile distribution with total {len(rank_list)} data points')
-        plt.savefig(buf, format='png')
-        plt.close()
-
-        buf.seek(0)
-        pil_img = Image.open(buf)
-        wandb.log({"validation/rank_box_plot": [wandb.Image(pil_img)]})
-
-    def _confusion_matrix_plot2wandb(self, predictions, labels, is_train=False):
-        '''
-        Plot confusion matrix and log to wandb
-        :param predictions:
-        :param labels:
-        :param is_train:
-        :return:
-        '''
-        buf = io.BytesIO()
-        cm = confusion_matrix(labels.cpu().numpy(), predictions.cpu().numpy())
-        df_cm = pd.DataFrame(cm, index=[i for i in "01"], columns=[i for i in "01"])
-        plt.figure(figsize=(10, 7))
-        sn.heatmap(df_cm, annot=True)
-        plt.title(f'Confusion matrix')
-        plt.xlabel('Predicted label')
-        plt.ylabel('True label')
-        plt.savefig(buf, format='png')
-        plt.close()
-        buf.seek(0)
-        pil_img = Image.open(buf)
-        if is_train:
-            wandb.log({"confusion_matrix": [wandb.Image(pil_img)]})
-        else:
-            wandb.log({"validation/confusion_matrix": [wandb.Image(pil_img)]})
-
     def load_pretrained_model(self, model_path, device='cuda', mode='inference'):
         '''
         :param model_path:
         :param device:
         :param mode: 'inference' or 'contact_train' or 'contact_continual_train' or 'binding_continual_train' or 'binding_train'
+                     or 'binding_train_no_contact'
             inference: load the model for inference, set all the parameters to not require grad
             contact_train: train the SMARTBind contact model from scratch
             contact_continual_train: continual training the SMARTBind contact model
             binding_train: train the SMARTBind binding model from scratch, freeze the contact part
             binding_continual_train: continual training the SMARTBind binding model, freeze the contact part
+            binding_train_no_contact: train binding from scratch WITHOUT loading contact pretrained weights,
+                                      only RNA-FM pretrained weights are kept
         :return:
         '''
-        assert mode in ['inference', 'contact_train', 'contact_continual_train', 'binding_train', 'binding_continual_train'], \
-            ("Mode must be 'inference' or 'contact_train' or 'contact_continual_train' or 'binding_train' or 'binding_continual_train'")
-        print(f'Loading pretrained model from {model_path} for {mode}...')
+        assert mode in ['inference', 'contact_train', 'contact_continual_train', 'binding_train',
+                         'binding_continual_train', 'binding_train_no_contact'], \
+            ("Mode must be 'inference' or 'contact_train' or 'contact_continual_train' or 'binding_train' "
+             "or 'binding_continual_train' or 'binding_train_no_contact'")
+        # print(f'Loading pretrained model from {model_path} for {mode}...')
+
+        # Ablation: only keep RNA-FM pretrained weights, everything else from scratch
+        if mode == 'binding_train_no_contact':
+            freeze_model(self.rna_fm_model)
+            # rna_featurizer and smol_featurizer are NOT used in binding pipeline,
+            # freeze them to prevent any accidental gradient flow
+            freeze_model(self.rna_featurizer)
+            freeze_model(self.smol_featurizer)
+
+            # Re-initialize smol_binding_featurizer from scratch
+            for layer in self.smol_binding_featurizer:
+                if isinstance(layer, nn.Linear):
+                    kaiming_normal_(layer.weight, nonlinearity='leaky_relu')
+                    if layer.bias is not None:
+                        layer.bias.data.fill_(0.01)
+            # Re-initialize binding_site_featurizer from scratch
+            for layer in self.binding_site_featurizer.modules():
+                if isinstance(layer, nn.Linear):
+                    kaiming_normal_(layer.weight, nonlinearity='leaky_relu')
+                    if layer.bias is not None:
+                        layer.bias.data.fill_(0.01)
+
+            for name, param in self.named_parameters():
+                if param.requires_grad:
+                    print(f"{name} will be trained.")
+            return
+
         if model_path is None:
             return
         if mode == 'contact_train':
@@ -620,121 +588,45 @@ class BindingPL(LightningModule):
         freeze_model(self.smol_featurizer)
 
     def predict_binding(self, rna_sequence, ligand):
-        '''
-
-        :param rna_sequence: RNA sequence string
-        :param ligand: in fp2 list
-        :return:
-        '''
         rna_sequence = rna_sequence.upper()
         ligand = torch.tensor(ligand).to(self.device)
-        rna_sequence = [('rna', rna_sequence)]
-        _, _, batch_tokens = self.batch_converter(rna_sequence)
-        batch_tokens = batch_tokens.to(self.device)
         self.eval()
         with torch.no_grad():
-            results = self.rna_fm_model(batch_tokens, repr_layers=[12])
-            rna_sequence_embedding = results["representations"][12].squeeze(0)[1:-1]
-        match_smol_embedding = self.smol_binding_featurizer(ligand.float().unsqueeze(0))
-        binding_map_prediction = self.binding_site_featurizer(match_smol_embedding,
-                                                              rna_sequence_embedding).squeeze()
+            # Handle long RNA sequences by chunking (same as _rna_encoder_val)
+            if len(rna_sequence) > 1020:
+                chunks = [rna_sequence[i:i + 1020] for i in range(0, len(rna_sequence), 1020)]
+                embeddings = []
+                for chunk_sequence in chunks:
+                    data = [('rna', chunk_sequence)]
+                    _, _, batch_tokens = self.batch_converter(data)
+                    batch_tokens = batch_tokens.to(self.device)
+                    results = self.rna_fm_model(batch_tokens, repr_layers=[12])
+                    embeddings.append(results["representations"][12].squeeze(0)[1:-1])
+                rna_sequence_embedding = torch.cat(embeddings, dim=0)
+            else:
+                data = [('rna', rna_sequence)]
+                _, _, batch_tokens = self.batch_converter(data)
+                batch_tokens = batch_tokens.to(self.device)
+                results = self.rna_fm_model(batch_tokens, repr_layers=[12])
+                rna_sequence_embedding = results["representations"][12].squeeze(0)[1:-1]
+
+            match_smol_embedding = self.smol_binding_featurizer(ligand.float().unsqueeze(0))
+
+            # Handle long embeddings by chunking for binding_site_featurizer (same as _binding_position_forward_val)
+            if len(rna_sequence_embedding) <= 512:
+                binding_map_prediction = self.binding_site_featurizer(match_smol_embedding,
+                                                                      rna_sequence_embedding).squeeze()
+            else:
+                if len(rna_sequence_embedding) % 512 == 1:
+                    rna_sequence_embedding = rna_sequence_embedding[:-1]
+                chunks = [rna_sequence_embedding[i:i + 512] for i in range(0, len(rna_sequence_embedding), 512)]
+                binding_prediction_list = []
+                for rna_chunk in chunks:
+                    pred = self.binding_site_featurizer(match_smol_embedding, rna_chunk).squeeze()
+                    binding_prediction_list.append(pred)
+                binding_map_prediction = torch.cat(binding_prediction_list, dim=0)
+
         return binding_map_prediction
-
-    def _auc_plot2wandb(self, prediction_list=None,
-                        label_list=None, rna_name_list=None, save=False):
-        """
-        Plot AUC curve and log to wandb.
-        Plot MCC curve and log to wandb.
-        """
-        if save:
-            result_dict = {
-                'prediction_list': [[tensor.cpu() for tensor in sublist] for sublist in prediction_list],
-                'label_list': [[tensor.cpu() for tensor in sublist] for sublist in label_list],
-                'rna_name_list': rna_name_list,
-            }
-            with open(self.model_path + '/input_result_dict.pkl', 'wb') as f:
-                pickle.dump(result_dict, f)
-
-        # calculate threshold of the predictions using Youden's J statistic
-        yjs_labels = []
-        yjs_predictions = []
-        for i in range(len(prediction_list)):
-            this_prediction_batch = prediction_list[i]
-            this_label_batch = label_list[i]
-            for j in range(len(this_label_batch)):
-                this_prediction = this_prediction_batch[j]
-                this_label = this_label_batch[j]
-                this_prediction_tensors = [pred.clone().detach() for pred in this_prediction]
-                this_prediction = torch.stack(this_prediction_tensors).clone().detach()
-                this_label_tensors = [label.clone().detach() for label in this_label]
-                this_label = torch.stack(this_label_tensors).clone().detach()
-                yjs_labels.extend(this_label.cpu().numpy())
-                yjs_predictions.extend(this_prediction.cpu().numpy())
-
-        fpr, tpr, thresholds = roc_curve(yjs_labels, yjs_predictions)
-        optimal_idx = np.argmax(tpr - fpr)
-        yjs_threshold = thresholds[optimal_idx]
-
-        # calculate the auc score, accuracy, and mcc score separately
-        auc_score_list = []
-        mcc_score_list = []
-        nan_auc_score_list = []
-        nan_mcc_score_list = []
-        nan_this_label_list = []
-        nan_this_prediction_list = []
-        for i in range(len(prediction_list)):
-            this_prediction_batch = prediction_list[i]
-            this_label_batch = label_list[i]
-            for j in range(len(this_label_batch)):
-                this_prediction = this_prediction_batch[j]
-                this_label = this_label_batch[j]
-                this_prediction_tensors = [pred.clone().detach() for pred in this_prediction]
-                this_prediction = torch.stack(this_prediction_tensors).clone().detach()
-                this_label_tensors = [label.clone().detach() for label in this_label]
-                this_label = torch.stack(this_label_tensors).clone().detach()
-                # prediction by threshold
-                this_prediction_threshold = this_prediction > yjs_threshold
-                mcc = matthews_corrcoef(this_label.cpu().numpy(), this_prediction_threshold.cpu().numpy())
-
-                fpr, tpr, thresholds = roc_curve(this_label.cpu().numpy(), this_prediction.cpu().numpy())
-                auc_score = auc(fpr, tpr)
-                if np.isnan(auc_score):
-                    nan_auc_score_list.append(auc_score)
-                    nan_mcc_score_list.append(mcc)
-                    nan_this_label_list.append(this_label)
-                    nan_this_prediction_list.append(this_prediction)
-                    print(f'nan auc score: {auc_score}')
-                    continue
-                auc_score_list.append(auc_score)
-                mcc_score_list.append(mcc)
-
-        avg_mcc = sum(mcc_score_list) / len(mcc_score_list)
-        avg_auc = sum(auc_score_list) / len(auc_score_list)
-        # save the result_dict as pkl
-        if save:
-            result_dict = {
-                'mcc_score_list': mcc_score_list,
-                'auc_score_list': auc_score_list,
-            }
-            with open(self.model_path + '/separate_result_dict.pkl', 'wb') as f:
-                pickle.dump(result_dict, f)
-
-            nan_dict = {
-                'nan_mcc_score_list': nan_mcc_score_list,
-                'nan_auc_score_list': nan_auc_score_list,
-                'nan_this_label_list': nan_this_label_list,
-                'nan_this_prediction_list': nan_this_prediction_list,
-            }
-            with open(self.model_path + '/nan_result_dict.pkl', 'wb') as f:
-                pickle.dump(nan_dict, f)
-
-            wandb.log({"validation_loss/separate_avg_mcc": avg_mcc,
-                       "validation_loss/separate_avg_auc": avg_auc,
-                       "validation_loss/yjs_threshold": yjs_threshold})
-
-        wandb.log({"validation/separate_avg_mcc": avg_mcc,
-                   "validation/separate_avg_auc": avg_auc,
-                   "validation/yjs_threshold": yjs_threshold})
 
     def inference_single_rna(self, rna_sequence):
         """

@@ -1,0 +1,34 @@
+training_params:
+  batch_size: 24
+  patience: 16
+  seed: 8
+  max_epochs: 200
+  mlp_dropout: 0.1
+  gradient_clip_val: 0.1
+  smol_binding_lr: 0.001
+  smol_binding_weight_decay: 0.001
+  binding_site_lr: 0.001
+  binding_site_weight_decay: 0.001
+  model_save_folder: 'model_training'
+  device: 'cuda'
+
+model_params:
+  out_feature: 256
+  binding_positive_weight: 12
+  binding_score_model_path: './pretrained_binding_score_weight'
+  training_mode: 'binding_continual_train'
+
+data_params:
+  fold_num: 1  # the model weight for the specified fold_num will be loaded for training; the specified fold split will be used as for validation during training;
+  data_aug_replace_ratio: 0.15
+  data_aug_factor: 0
+  num_workers: 2
+  training_data: 'training_data/hariboss_merged_10fd_with_decoys.pkl'
+
+wandb_params:
+  key: 'wandb_api_key'
+  project: 'SmartBind-train'
+  task: 'smartbind-test'
+  entity: 'wandb_entity_name'
+  log_model: False
+  offline: False
