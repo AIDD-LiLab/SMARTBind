@@ -26,7 +26,8 @@ class RLDataset(Dataset):
                  replace_ratio=0.15,
                  augmentation_factor=3,
                  replace_res_type=None,
-                 rna_smol_map=None
+                 rna_smol_map=None,
+                 rna_smol_map_path=None
                  ):
         if non_binding_index_list is None:
             non_binding_index_list = []
@@ -41,7 +42,8 @@ class RLDataset(Dataset):
         if rna_smol_map is not None:
             self.rna_smol_map = rna_smol_map
         else:
-            rna_smol_map_path = Path(__file__).resolve().parent / 'rna_smol_map.json'
+            if rna_smol_map_path is None:
+                rna_smol_map_path = Path(__file__).resolve().parent / 'rna_smol_map.json'
             with open(rna_smol_map_path, 'r') as f:
                 self.rna_smol_map = json.load(f)
 
@@ -59,7 +61,7 @@ class RLDataset(Dataset):
         self.augmentation_factor = augmentation_factor
         self.replace_type = replace_res_type
         self.non_binding_index_list = non_binding_index_list
-        
+
     def __len__(self):
         return len(self.rna_sequences)
 
@@ -81,7 +83,7 @@ class RLDataset(Dataset):
         if self.is_val:
             decoy_smols = [s[1] for s in decoy_smols_filter]
         else:
-            decoy_smols_total = random.sample(decoy_smols_filter, self.random_decoy_num+self.extra_decoy_num)
+            decoy_smols_total = random.sample(decoy_smols_filter, self.random_decoy_num + self.extra_decoy_num)
             decoy_smols = decoy_smols_total[:self.random_decoy_num]
             decoy_smols = [s[1] for s in decoy_smols]
             decoy_smols_extra_fp = decoy_smols_total[self.random_decoy_num:]

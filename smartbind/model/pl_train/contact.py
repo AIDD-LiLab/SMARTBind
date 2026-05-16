@@ -26,6 +26,7 @@ def rna_chain_for_ligand(rna_smol_map, ligand):
             out.extend(rna_list)
     return list(set(out))
 
+
 def unique_rna(rna_sequences_as_decoy):
     seen = set()
     rna_sequences_as_decoy_uniq = []
@@ -138,13 +139,13 @@ class ContactPL(LightningModule):
             return None
         rna_tokenized_list, token_embeddings_list = self._rna_processing(rna_sequences)
         backward_losses = []
-        
+
         # Precompute all unique RNA embeddings outside the loop
         all_unique_rna = unique_rna(rna_sequences)
         all_decoy_rna_tokenized, _ = self._rna_processing(all_unique_rna)
         # Create mapping: chain_id -> tokenized embedding
         rna_chain_to_embedding = {
-            rna[0]: embedding 
+            rna[0]: embedding
             for rna, embedding in zip(all_unique_rna, all_decoy_rna_tokenized)
         }
 
@@ -259,18 +260,19 @@ class ContactPL(LightningModule):
         epochs_val_rna_cts_loss = []
         rank_percentile_list = []
         positive_anchor_distance = []
-        
+
         # Precompute all unique RNA embeddings outside the loop
         all_unique_rna = unique_rna(rna_sequences)
         all_decoy_rna_tokenized, _ = self._rna_processing(all_unique_rna)
         # Create mapping: chain_id -> tokenized embedding
         rna_chain_to_embedding = {
-            rna[0]: embedding 
+            rna[0]: embedding
             for rna, embedding in zip(all_unique_rna, all_decoy_rna_tokenized)
         }
 
         for anchor_rna, match_smol, decoy_smols, rna_sequence_name, match_smol_name, token_embeddings in \
-                zip(rna_tokenized_list, match_smols, decoy_smols_list, rna_sequences_names, match_smols_name, token_embeddings_list):
+                zip(rna_tokenized_list, match_smols, decoy_smols_list, rna_sequences_names, match_smols_name,
+                    token_embeddings_list):
             smol_cts_losses = []
             rna_cts_losses = []
             anchor_rna = anchor_rna.squeeze(1)
@@ -384,19 +386,19 @@ class ContactPL(LightningModule):
                                                lr=self.rna_mlp_lr,
                                                weight_decay=self.rna_mlp_weight_decay)
         rna_lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-                                rna_featurizer_opt,
-                                T_0=8,
-                                eta_min=0.001,
-                                T_mult=1)
+            rna_featurizer_opt,
+            T_0=8,
+            eta_min=0.001,
+            T_mult=1)
 
         smol_featurizer_opt = torch.optim.AdamW(self.smol_featurizer.parameters(),
                                                 lr=self.smol_mlp_lr,
                                                 weight_decay=self.smol_mlp_weight_decay)
         smol_lr_scheduler = (torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-                                smol_featurizer_opt,
-                                T_0=8,
-                                eta_min=0.001,
-                                T_mult=1))
+            smol_featurizer_opt,
+            T_0=8,
+            eta_min=0.001,
+            T_mult=1))
 
         opt_rna_fm = torch.optim.AdamW(self.rna_fm_model.parameters(),
                                        lr=self.lr_rna_fm,
@@ -464,7 +466,7 @@ class ContactPL(LightningModule):
         for decoy_distance in decoy_distance_list:
             if match_distance.item() <= decoy_distance.item():
                 rank += 1
-        return (len(decoy_distance_list)+1 -rank) / (len(decoy_distance_list)+1)
+        return (len(decoy_distance_list) + 1 - rank) / (len(decoy_distance_list) + 1)
 
     def _rna_encoder(self, rna_sequences):
         """

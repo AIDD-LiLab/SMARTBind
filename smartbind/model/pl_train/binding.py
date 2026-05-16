@@ -1,19 +1,12 @@
-import io
 import os
-import pickle
 import time
 
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-import seaborn as sn
 import random
 import torch
 import wandb
-from PIL import Image
 from pytorch_lightning import LightningModule
 from pytorch_lightning import seed_everything
-from sklearn.metrics import auc, confusion_matrix, matthews_corrcoef, roc_curve
 from torch import nn
 from torch.nn.init import kaiming_normal_
 
@@ -27,6 +20,7 @@ class BindingPL(LightningModule):
     '''
     BindingPL is a PyTorch Lightning module for training the binding site prediction model.
     '''
+
     def __init__(self,
                  device: str = 'cuda',
                  out_feature: int = 256,
@@ -495,7 +489,7 @@ class BindingPL(LightningModule):
         :return:
         '''
         assert mode in ['inference', 'contact_train', 'contact_continual_train', 'binding_train',
-                         'binding_continual_train', 'binding_train_no_contact'], \
+                        'binding_continual_train', 'binding_train_no_contact'], \
             ("Mode must be 'inference' or 'contact_train' or 'contact_continual_train' or 'binding_train' "
              "or 'binding_continual_train' or 'binding_train_no_contact'")
         # print(f'Loading pretrained model from {model_path} for {mode}...')
@@ -532,7 +526,7 @@ class BindingPL(LightningModule):
             for name, param in self.named_parameters():
                 param.requires_grad = True
             return
-        
+
         # only load params that are in the model and match the size
         model_dict = self.state_dict()
         pretrained_dict = torch.load(model_path, map_location=torch.device(device=device))
