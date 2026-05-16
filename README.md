@@ -133,12 +133,60 @@ print(binding_site_scores)
 Please refer to the `notebook/README.md` for the details of the inference with SMARTBind model using jupyter
 notebooks.
 
+## Training Dataset
+### Preprocessed Dataset
+The processed dataset used for this work can be downloaded from the [Zenodo](https://zenodo.org/records/17197893).
+- 10-fold RNAmigos1 random split training dataset can be downloaded from https://drive.google.com/file/d/1iQBwmtlKUzaxSdl58oEeruMSskoJcXzy/view?usp=sharing.
+- 10-fold HARIBOSS random split training datasets can be downloaded from https://drive.google.com/file/d/1oyf7Tr2I_Yx2vHibymb1_fi0Lt8SiK_0/view?usp=sharing.
+- All the splits for HARIBOSS training datasets can be downloaded from https://drive.google.com/drive/folders/1j7QMGHKyhpJLasyXLjYZ2Db9SbvKNKbR?usp=sharing.
+- All the splits for the GerNA-Bind subset of the HARIBOSS training datasets can be downloaded from https://drive.google.com/drive/folders/1V5jDPI4scKlNuW9RbB7uS90xDNT15Oke?usp=sharing.
+
+To pretraining the model, please download the dataset and put it in the `data` folder.
+
+## Train the SMARTBind from Scratch
+For training SMARTBind model, there are two stages of training. The binding score model is trained from 
+scratch with fine-tuning the RNA-FM model. The binding site prediction model is trained with the 
+pre-trained binding score model.
+
+### Stage 1: train the binding score prediction task with RNA-FM fine-tuned.
+1. Modify `binding_score_training.yaml` in `conf` folder.
+2. Set `data_params.training_data` to the path to the training data downloaded from Training Data Section.
+
+3. Execute the following command.
+```bash
+python binding_score_train.py
+```
+#### Training with ligand-specific decoy augmentation
+Please refer to the `notebook/decoy_augmentation.ipynb` for building decoy augmented training data, processed `hariboss_merged_10fd_with_decoys.pkl`
+is also provided. By modifying `data_params.decoy_num` and `data_params.extra_decoy_num` to adjust the proportion of native
+negative decoys and augmented decoys during training, our default setting is 48:24. By setting 72:0, it will be equivalent to training without decoy augmentation.
+
+### Stage 2: train the binding site prediction task with pre-trained binding score prediction model.
+If you want to retrain a SMARTBind binding site prediction model, it's recommended to use the trained binding score model
+from Stage 1 or the provided pre-trained binding score model in `SMARTBind_weight` folder to initialize the binding score module weights.
+
+1. Modify `binding_site_training.yaml` in `conf` folder.
+2. Set `data_params.training_data` to the path to the training data.
+If you want to use your own dataset, please follow the jupyter notebook in `notebook/binding_data_curation.ipynb` 
+folder to preprocess your dataset.
+3. Set `model_params.binding_score_model_path` to the path to the folder containing the pre-trained binding score model.
+4. Execute the following command.
+
+```bash
+python smartbind_binding_train.py
+```
+
+
 ## Acknowledgements
-We thank the authors for making the following packages, software, and models open-sourced and easy to implement: [RNA-FM](https://github.com/ml4bio/RNA-FM), 
-[BioPython](https://biopython.org/), [ProDy](http://prody.csb.pitt.edu/), 
-[Open Babel](https://openbabel.org/index.html), [RDKit](https://www.rdkit.org/), [RNA 3D Hub](http://rna.bgsu.edu/rna3dhub/),
-[DeepCoy](https://github.com/fimrie/DeepCoy), [RNA3DB](https://github.com/marcellszi/rna3db), [MMseqs2](https://github.com/soedinglab/MMseqs2),
-[PyTorch Lightning](https://www.pytorchlightning.ai/), [AutoDock](https://github.com/ccsb-scripps/AutoDock-GPU), [rDock](https://rdock.github.io/).
+We thank the authors for making the following packages, software, and models open-sourced and easy to implement:
+
+- RNA foundation model: [RNA-FM](https://github.com/ml4bio/RNA-FM)
+- RNA and molecular analysis: [BioPython](https://biopython.org/), [ProDy](http://prody.csb.pitt.edu/), [RNA 3D Hub](http://rna.bgsu.edu/rna3dhub/), [RNA3DB](https://github.com/marcellszi/rna3db), [MMseqs2](https://github.com/soedinglab/MMseqs2), [Open Babel](https://openbabel.org/index.html), [RDKit](https://www.rdkit.org/), [RMalign]()
+- Decoy generation: [DeepCoy](https://github.com/fimrie/DeepCoy), [DecoyFinder](https://github.com/URV-cheminformatics/DecoyFinder)
+- Binding score and virtual-screening benchmark methods: [RNAmigos1](https://github.com/cgoliver/RNAmigos), [RNAmigos2](https://github.com/cgoliver/rnamigos2), [GerNA-Bind](https://github.com/GENTEL-lab/GerNA-Bind), [RNAsmol](https://github.com/hongli-ma/RNAsmol), [SMRTnet](https://github.com/Yuhan-Fei/SMRTnet), [DrugBAN](https://github.com/peizhenbai/DrugBAN), [GraphDTA](https://github.com/thinng/GraphDTA)
+- Binding site benchmark methods: [fpocketR](https://github.com/Weeks-UNC/fpocketR), [RNAsite](https://academic.oup.com/bioinformatics/article/37/1/36/6069564), [RLsite](https://github.com/SaisaiSun/RLsite), [Rsite2](https://pubmed.ncbi.nlm.nih.gov/26751501/)
+- Docking and virtual screening: [AutoDock](https://autodocksuite.scripps.edu/autodock4/), [rDock](https://rdock.github.io/), [AutoDock-GPU](https://github.com/ccsb-scripps/AutoDock-GPU), [GNINA 1.3](https://github.com/gnina/gnina), [DeepDocking](https://github.com/jamesgleave/DD_protocol)
+- Deep learning framework: [PyTorch Lightning](https://www.pytorchlightning.ai/)
 
 
 ## Cite SMARTBind
