@@ -31,6 +31,11 @@ cross-validation dataset using DecoyFinder- and DeepCoy-generated decoys:
 - [DecoyFinder and DeepCoy inference](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig2/decoyfinder_deepcoy_inference.ipynb)
 - [Fig. 2b reproduction](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig2/figure2b.ipynb)
 
+## Fig. 2c-e and Supplementary Fig. 4a-b
+Scripts for reproducing benchmark performance on the HARIBOSS 5-fold cross-validation datasets.
+
+- [HARIBOSS 5-fold cross-validation inference](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig2/performance_reproduce_5fd_hariboss.ipynb)
+
 ## Supplementary Fig. 3
 
 Analysis scripts for evaluating five data-splitting strategies on the HARIBOSS
