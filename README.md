@@ -4,6 +4,51 @@ This is the official repository for SMARTBind model. SMARTBind is a sequence-bas
 method by leveraging contrastive learning and RNA foundation model. It can be used for RNA-ligand interaction virtual screening
 and binding site prediction for the potential ligand binders.
 
+
+## System requirements
+
+### Software dependencies
+
+SMARTBind is distributed as a conda environment. Exact pinned versions are in
+`environment.yml`. Key components:
+
+| Component         | Version                                       |
+|-------------------|-----------------------------------------------|
+| Operating system  | Linux x86-64 (Ubuntu 20.04 / 22.04 LTS)       |
+| Python            | 3.9.21                                        |
+| PyTorch           | 2.5.1 (CUDA 12.4 build)                       |
+| CUDA runtime      | 12.4                                          |
+| cuDNN             | 9.1.0                                         |
+| PyTorch Lightning | 2.5.0.post0                                   |
+| RDKit             | 2024.09.4                                     |
+| BioPython         | 1.84                                          |
+| Open Babel        | 3.1.1                                         |
+| Hydra             | 1.3.2                                         |
+
+macOS and native Windows are **not** supported by the shipped `environment.yml`
+(which is pinned to `linux-64`). Reviewers on macOS or Windows should use WSL2
+or a Linux container.
+
+### Tested on
+
+| OS                                        | Python  | PyTorch | CUDA | GPU                          | Driver |
+|-------------------------------------------|---------|---------|------|------------------------------|--------|
+| Ubuntu 22.04.5 LTS (native)               | 3.9.21  | 2.5.1   | 12.4 | NVIDIA RTX 3090 (24 GB)      | 591.86 |
+| Ubuntu 22.04.5 LTS (WSL2 on Windows 11)   | 3.9.21  | 2.5.1   | 12.4 | NVIDIA RTX 3090 (24 GB)      | 591.86 |
+
+(Maintainers: add A100 / H100 / additional tested GPUs as they become available.)
+
+### Hardware requirements
+
+| Resource     | Minimum                                                | Recommended                    | Notes                                                                                       |
+|--------------|--------------------------------------------------------|--------------------------------|---------------------------------------------------------------------------------------------|
+| GPU          | NVIDIA, ≥ 8 GB VRAM, compute capability ≥ 7.0          | RTX 3090 / A100, 24+ GB VRAM   | Required for training. Inference can fall back to CPU with `--device cpu`.                  |
+| System RAM   | 8 GB                                                   | 16 GB                          | Conda environment solve peaks at ≈ 4 GB.                                                    |
+| Disk space   | 12 GB free                                             | 25 GB free                     | Conda env (~ 5 GB) + weights (~ 2.6 GB) + Zenodo bundle (~ 2.6 GB) + training outputs.       |
+| Network      | HTTPS to github.com, zenodo.org, drive.google.com      | —                              | RNA-FM weights additionally require reachability to `proj.cse.cuhk.edu.hk` unless mirrored. |
+| CPU          | 4 cores                                                | 8+ cores                       | Affects only SMILES → FP2 preprocessing throughput.                                          |
+
+
 ## Installation
 ```bash
 git clone https://github.com/AIDD-LiLab/SMARTBind.git
@@ -16,6 +61,36 @@ To install the required packages, run the following command:
 # cuda 12.4 is required to satisfy the torch version
 conda env create -f environment.yml
 conda activate SMARTBind_env
+```
+
+### Typical install time
+
+On a workstation with a 100 Mbps internet link and an NVMe-class SSD:
+
+| Step                                                          | Wall-clock      |
+|---------------------------------------------------------------|-----------------|
+| `conda env create -f environment.yml` (libmamba solver)       | ~ 7–10 min      |
+| Pretrained-weight download from Zenodo (~ 2.6 GB)             | ~ 5 min         |
+| Pretrained-weight download via gdown (~ 2.6 GB, alternative)  | ~ 10–15 min     |
+| **Total cold install**                                        | **~ 15–25 min** |
+
+For faster solves, install libmamba first:
+
+```bash
+conda install -n base conda-libmamba-solver
+conda config --set solver libmamba
+```
+### RNA-FM weights (one-time)
+
+SMARTBind uses RNA-FM as its RNA encoder. On first run, the code attempts to
+download RNA-FM weights from `https://proj.cse.cuhk.edu.hk/rnafm/api/download?filename=RNA-FM_pretrained.pth`.
+If your installation errors with `HTTP 403` or hangs at the RNA-FM download
+step, place the weight file manually:
+
+```bash
+mkdir -p ~/.cache/torch/hub/checkpoints
+# Place RNA-FM_pretrained.pth here (≈ 398 MB).
+# Authors: replace this comment with a persistent (Zenodo) mirror once available.
 ```
 
 ## Inference with SMARTBind
@@ -154,7 +229,7 @@ pre-trained binding score model.
 
 3. Execute the following command.
 ```bash
-python binding_score_train.py
+python train_binding_score.py
 ```
 #### Training with ligand-specific decoy augmentation
 Please refer to the `notebook/decoy_augmentation.ipynb` for building decoy augmented training data, processed `hariboss_merged_10fd_with_decoys.pkl`
@@ -173,7 +248,7 @@ folder to preprocess your dataset.
 4. Execute the following command.
 
 ```bash
-python smartbind_binding_train.py
+python train_binding_site.py
 ```
 
 
