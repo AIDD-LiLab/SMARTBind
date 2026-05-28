@@ -1,4 +1,4 @@
-conda activate smartbind_prev
+conda activate SMARTBind_env
 
 python inference.py \
     --rna "GGCGUAUAUCCUUAAUGAUAUGGUUUAAGGGCAAUACAUAGAAACCACAAAUUUCUUACUGCGUC" \
