@@ -19,7 +19,7 @@ conda activate SMARTBind_env
 ```
 
 ## Inference with SMARTBind
-Downloaded pretrained SMARTBind models from [Zenodo](https://zenodo.org/records/17254230). 
+Downloaded pretrained SMARTBind models from [Zenodo](https://zenodo.org/records/20252150). 
 An alternative way is to use `gdown` as follows if you are working in a server without browser access:
 ```bash
 mkdir SMARTBind_weight
@@ -135,7 +135,7 @@ notebooks.
 
 ## Training Dataset
 ### Preprocessed Dataset
-The processed dataset used for this work can be downloaded from the [Zenodo](https://zenodo.org/records/17197893).
+The processed dataset used for this work can be downloaded from the [Zenodo](https://zenodo.org/records/20252150).
 - 10-fold RNAmigos1 random split training dataset can be downloaded from https://drive.google.com/file/d/1iQBwmtlKUzaxSdl58oEeruMSskoJcXzy/view?usp=sharing.
 - 10-fold HARIBOSS random split training datasets can be downloaded from https://drive.google.com/file/d/1oyf7Tr2I_Yx2vHibymb1_fi0Lt8SiK_0/view?usp=sharing.
 - All the splits for HARIBOSS training datasets can be downloaded from https://drive.google.com/drive/folders/1j7QMGHKyhpJLasyXLjYZ2Db9SbvKNKbR?usp=sharing.
