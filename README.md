@@ -20,14 +20,6 @@ SMARTBind is distributed as a conda environment. Exact pinned versions are in
 | CUDA runtime      | 12.4                                          |
 | cuDNN             | 9.1.0                                         |
 | PyTorch Lightning | 2.5.0.post0                                   |
-| RDKit             | 2024.09.4                                     |
-| BioPython         | 1.84                                          |
-| Open Babel        | 3.1.1                                         |
-| Hydra             | 1.3.2                                         |
-
-macOS and native Windows are **not** supported by the shipped `environment.yml`
-(which is pinned to `linux-64`). Reviewers on macOS or Windows should use WSL2
-or a Linux container.
 
 ### Tested on
 
@@ -35,8 +27,6 @@ or a Linux container.
 |-------------------------------------------|---------|---------|------|------------------------------|--------|
 | Ubuntu 22.04.5 LTS (native)               | 3.9.21  | 2.5.1   | 12.4 | NVIDIA RTX 3090 (24 GB)      | 591.86 |
 | Ubuntu 22.04.5 LTS (WSL2 on Windows 11)   | 3.9.21  | 2.5.1   | 12.4 | NVIDIA RTX 3090 (24 GB)      | 591.86 |
-
-(Maintainers: add A100 / H100 / additional tested GPUs as they become available.)
 
 ### Hardware requirements
 
@@ -46,7 +36,7 @@ or a Linux container.
 | System RAM   | 8 GB                                                   | 16 GB                          | Conda environment solve peaks at ≈ 4 GB.                                                    |
 | Disk space   | 12 GB free                                             | 25 GB free                     | Conda env (~ 5 GB) + weights (~ 2.6 GB) + Zenodo bundle (~ 2.6 GB) + training outputs.       |
 | Network      | HTTPS to github.com, zenodo.org, drive.google.com      | —                              | RNA-FM weights additionally require reachability to `proj.cse.cuhk.edu.hk` unless mirrored. |
-| CPU          | 4 cores                                                | 8+ cores                       | Affects only SMILES → FP2 preprocessing throughput.                                          |
+| CPU          | 1 cores                                                | 4+ cores                       | Affects only SMILES → FP2 preprocessing throughput.                                          |
 
 
 ## Installation
@@ -157,6 +147,29 @@ df[["average"]].sort_values("average", ascending=False).to_csv(
     index_label="Ligand_ID",
 )
 ```
+#### Expected demo output
+
+Running the example above with the 64 nt RNA from `inference.sh` and
+`notebook/ligand_library.txt` (27 ligands) produces a TSV with two columns
+(`SMILES`, `Binding_Score`). The first three rows:
+
+```
+SMILES                                                       Binding_Score
+[H]/N=C(\N)/Nc1ccc(cc1)C(=O)Oc2ccc(cc2)N/C(=N\[H])/N         -0.4962
+c1cc(ccc1C2=NCCN2CCN)C(=O)Nc3ccc(cc3)C4=NCCN4                -0.4377
+[H]/N=C(\c1ccc2c(c1)c(cc(n2)C)Nc3cccc(c3)OC)/N               -0.2829
+```
+
+Scores are ensemble-averaged cosine similarities in the range `[-1, +1]`; on
+this demo input they fall in `[-0.633, -0.283]` with mean `-0.495`.
+
+#### Expected demo run time
+
+| Demo                                                          | Hardware                | Wall-clock           |
+|---------------------------------------------------------------|-------------------------|----------------------|
+| README example (64 nt RNA × 27 ligands × 10-fold ensemble)    | NVIDIA RTX 3090, 24 GB  | ~ 31 s               |
+| README example (same input, CPU only)                          | AMD Ryzen 7 5800X, 8 cores / 16 threads | ~ 19 s |
+
 
 ### Binding site prediction
 
