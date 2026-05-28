@@ -263,6 +263,8 @@ We thank the authors for making the following packages, software, and models ope
 - Docking and virtual screening: [AutoDock](https://autodocksuite.scripps.edu/autodock4/), [rDock](https://rdock.github.io/), [AutoDock-GPU](https://github.com/ccsb-scripps/AutoDock-GPU), [GNINA 1.3](https://github.com/gnina/gnina), [DeepDocking](https://github.com/jamesgleave/DD_protocol)
 - Deep learning framework: [PyTorch Lightning](https://www.pytorchlightning.ai/)
 
+## License
+This project is released under the [MIT License](LICENSE).
 
 ## Cite SMARTBind
 ```bibtex
