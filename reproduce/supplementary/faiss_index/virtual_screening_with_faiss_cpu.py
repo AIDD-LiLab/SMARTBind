@@ -1,6 +1,25 @@
 import argparse
 import sys
-sys.path.append("..")
+from pathlib import Path
+
+
+def _find_repo_root(start):
+    """Walk up until the SMARTBind package is found.
+
+    `sys.path.append("..")` only worked when the working directory happened to be a
+    direct child of the repository root; this makes the script importable wherever it
+    is run from.
+    """
+    d = Path(start).resolve()
+    for folder in (d, *d.parents):
+        if (folder / "smartbind" / "__init__.py").is_file():
+            return folder
+    raise SystemExit(
+        "\nCould not locate the SMARTBind repository root from " + str(start) +
+        ".\nRun this script from inside a checkout of the repository.\n")
+
+
+sys.path.insert(0, str(_find_repo_root(__file__)))
 
 import numpy as np
 import torch
@@ -35,18 +54,18 @@ def load_metadata(index_prefix):
     return metadata
 
 
-def load_single_faiss_index(index_prefix, model_idx):
+def load_single_faiss_index(index_prefix, checkpoint_name):
     """
-    Load a single FAISS index for one model.
-    
+    Load the FAISS index built from one checkpoint.
+
     Args:
         index_prefix: Prefix used when building the indexes
-        model_idx: Model index (0-based)
-        
+        checkpoint_name: Stem of the .pth this model was loaded from
+
     Returns:
-        FAISS index for the specified model
+        FAISS index for that checkpoint
     """
-    index_path = f'{index_prefix}_model{model_idx + 1}.faiss'
+    index_path = f'{index_prefix}_{checkpoint_name}.faiss'
     logger.info(f'Loading FAISS index from {index_path}')
     return faiss.read_index(index_path)
 
@@ -85,7 +104,7 @@ def search_with_rna_embedding(rna_sequence, index_prefix, smartbind_models, devi
         
         # Load FAISS index for this model only
         search_start = time.time()
-        index = load_single_faiss_index(index_prefix, model_idx)
+        index = load_single_faiss_index(index_prefix, model.checkpoint_name)
         
         # FAISS search returns (distances, indices)
         distances, indices = index.search(rna_embed_np, top_k)
@@ -124,7 +143,7 @@ def main():
     parser.add_argument(
         '--model_path',
         type=str,
-        default='../SMARTBind_weight',
+        default=str(_find_repo_root(__file__) / 'SMARTBind_weight'),
         help='Path to SmartBind model weights'
     )
     parser.add_argument(
@@ -183,12 +202,32 @@ def main():
     )
     logger.info(f'Loaded {len(smartbind_models)} models')
     
-    # Verify number of models matches
-    if len(smartbind_models) != metadata['num_models']:
+    # Verify the loaded checkpoints are exactly the ones the indexes were built from.
+    # A mismatch would pair an RNA embedding with another checkpoint's ligand index and
+    # produce plausible-looking but meaningless scores, so this is an error, not a warning.
+    loaded = [m.checkpoint_name for m in smartbind_models]
+    built = metadata.get('checkpoint_names')
+    if built is None:
         logger.warning(
-            f'Number of loaded models ({len(smartbind_models)}) does not match '
-            f'number of models in index ({metadata["num_models"]})'
+            'This index set predates checkpoint-name pairing and records only a model '
+            'count. Rebuild it with build_faiss_index.py so the pairing can be verified.'
         )
+        if len(smartbind_models) != metadata['num_models']:
+            raise SystemExit(
+                f'Loaded {len(smartbind_models)} checkpoints but the indexes were built '
+                f'from {metadata["num_models"]}.'
+            )
+    elif loaded != list(built):
+        raise SystemExit(
+            'The checkpoints loaded from --model_path do not match the ones the FAISS '
+            'indexes were built from.\n'
+            f'  loaded: {loaded}\n'
+            f'  indexes: {list(built)}\n'
+            'Point --model_path at the same weights directory used by build_faiss_index.py, '
+            'or rebuild the indexes.'
+        )
+    else:
+        logger.info(f'Checkpoint pairing verified for {len(loaded)} models')
     
     # Perform virtual screening (will load indexes one at a time)
     logger.info('Starting virtual screening...')

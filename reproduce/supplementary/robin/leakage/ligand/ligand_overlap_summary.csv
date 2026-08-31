@@ -1,0 +1,5 @@
+robin_set,training_set,robin_n,training_n,n_shared,pct_of_robin_set,pct_of_training_set
+ROBIN binder,HARIBOSS binder,1908,311,1,0.0524,0.3215
+ROBIN binder,HARIBOSS decoy,1908,22686,7,0.3669,0.0309
+ROBIN SMM decoy,HARIBOSS binder,22410,311,6,0.0268,1.9293
+ROBIN SMM decoy,HARIBOSS decoy,22410,22686,37,0.1651,0.1631

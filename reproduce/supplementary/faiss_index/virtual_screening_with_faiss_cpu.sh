@@ -1,24 +1,23 @@
 #!/bin/bash
-#SBATCH --job-name=faiss_cpu
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
-#SBATCH --mem=64gb
-#SBATCH --partition=bigmem
-#SBATCH --qos=yanjun.li-b
-#SBATCH --time=96:00:00
-#SBATCH --output=faiss_inference_cpu.out
-pwd; hostname; date
+# Step 2: screen one RNA against the pre-built FAISS indexes.  CPU only.
+#
+# On SLURM, submit with something like (adjust partition/qos for your site):
+#   sbatch --job-name=faiss_cpu --ntasks=1 --cpus-per-task=4 --mem=64gb \
+#          --time=96:00:00 --output=faiss_inference_cpu.out virtual_screening_with_faiss_cpu.sh
+set -euo pipefail
 
-module load conda
-conda activate smartbind_prev
+conda activate SMARTBind_env      # `module load conda` first on a module-based cluster
 
-export OMP_NUM_THREADS=4
-export MKL_NUM_THREADS=4
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
-python virtual_screening_with_faiss_cpu.py \
+THREADS="${THREADS:-4}"
+export OMP_NUM_THREADS="$THREADS"
+export MKL_NUM_THREADS="$THREADS"
+
+python "$REPO/reproduce/supplementary/faiss_index/virtual_screening_with_faiss_cpu.py" \
     --rna "GACAGCUGCUGUC" \
-    --index_prefix ligand_library_10M \
-    --output_dir faiss_vs_results_cpu_10M/ \
+    --index_prefix "${OUTPUT_PREFIX:-ligand_library_1M}" \
+    --output_dir faiss_vs_results_cpu/ \
     --top_k 100000 \
     --device cpu \
-    --num_threads 4
+    --num_threads "$THREADS"

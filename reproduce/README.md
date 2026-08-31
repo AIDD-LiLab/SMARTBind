@@ -9,47 +9,72 @@ Scripts for reproducing benchmark performance on the RNAmigos1 10-fold
 random-split dataset and figure panels, together with the corresponding
 swapping-test experiments:
 
-- [RNAmigos1 benchmark figure](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/supplementary/other_figures/rnamigos1_benchmark.ipynb)
-- [RNAmigos1 benchmark reproduction](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/supplementary/swap_test/performance_reproduce_rnamigos1.ipynb)
-- [RNAmigos1 RNA swapping test](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/supplementary/swap_test/rna_swapping_test_rnamigos1.ipynb)
-- [RNAmigos1 ligand swapping test](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/supplementary/swap_test/ligand_swapping_test_rnamigos1.ipynb)
+- [Fig. 2a and Supplementary Fig. 17a figures](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/supplementary/other_figures/rnamigos1_benchmark.py)
+  — `python rnamigos1_benchmark.py`; draws both panels from `raw_data/` and checks every bar
+  against the shipped summary tables. No weights, no inference
+- [RNAmigos1 10-fold benchmark](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/supplementary/other_figures/rnamigos1_benchmark.py)
+  — `python benchmark_10fold.py --dataset rnamigos1`; re-derives the per-binder rank
+  percentiles from the released checkpoints and checks them against the published means
+- [Swapping tests](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/supplementary/other_figures/swapping_test.py)
+  — `python swapping_test.py --dataset rnamigos1 --decoy-set both`; runs both the RNA and the
+  ligand arm and writes the per-fold and summary tables. 
 
-## Fig. 2c and Supplementary Fig. 4a-b
+## Supplementary Fig. 5a-b
 
-Scripts for reproducing benchmark behavior on the HARIBOSS 5-fold
-sequence-based split, together with the corresponding swapping-test
-experiments:
+RNA- and ligand-swapping tests on the HARIBOSS 5-fold sequence-based split:
 
-- [HARIBOSS RNA swapping test](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/supplementary/swap_test/rna_swapping_test_hariboss.ipynb)
-- [HARIBOSS ligand swapping test](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/supplementary/swap_test/ligand_swapping_test_hariboss.ipynb)
+- [Swapping tests](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/supplementary/swap_test/swapping_test.py)
+  — `python swapping_test.py --dataset hariboss --decoy-set pdb`
 
 ## Fig. 2b
 
 Scripts for reproducing benchmark performance on the HARIBOSS 10-fold
 cross-validation dataset using DecoyFinder- and DeepCoy-generated decoys:
 
-- [DecoyFinder and DeepCoy inference](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig2/decoyfinder_deepcoy_inference.ipynb)
-- [Fig. 2b reproduction](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig2/figure2b.ipynb)
+- [DecoyFinder and DeepCoy inference](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig2/decoyfinder_deepcoy_inference.py)
+  — `python decoyfinder_deepcoy_inference.py`; needs only the 10-fold pickle, the decoy
+  libraries in `data/decoys/` and `SMARTBind_weight/`, and checks itself against the
+  published values
+- [Fig. 2b figure](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig2/figure2b.ipynb) — draws the panel from
+  `raw_data/Fig2/`
 
-## Fig. 2c-e and Supplementary Fig. 4a-b
+## Fig. 2c-e and Supplementary Fig. 4a-c
 Scripts for reproducing benchmark performance on the HARIBOSS 5-fold cross-validation datasets.
 
-- [HARIBOSS 5-fold cross-validation inference](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig2/performance_reproduce_5fd_hariboss.ipynb)
+- [Fig. 2c-e figures](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig2/figure2cde.ipynb) — draws the three panels
+  from `raw_data/Fig2/`
+- [Supplementary Fig. 4a-c figures](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/supplementary/cv_performance/supplementary_figure4.ipynb)
+  — draws the three panels from `raw_data/SupplementaryFig4/`
+- [HARIBOSS 5-fold cross-validation inference](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig2/performance_reproduce_5fd_hariboss.py)
+  — `python performance_reproduce_5fd_hariboss.py`; runs all ten split/weight pairs,
+  prints both the per-sample (Fig. 2c) and fold-wise (Fig. 2d) summaries and checks
+  itself against the published values
+
+## Supplementary Fig. 1
+
+Analysis of the ligand-specific augmented decoys (all seven panels, one notebook):
+
+- [Decoy analysis](https://github.com/AIDD-LiLab/SMARTBind/tree/main/reproduce/supplementary/other_figures/supplementary_figure1.ipynb)
+- [Decoy augmentation pipeline](https://github.com/AIDD-LiLab/SMARTBind/blob/main/notebook/augmentation_data.ipynb)
 
 ## Supplementary Fig. 3
 
-Analysis scripts for evaluating five data-splitting strategies on the HARIBOSS
-dataset:
+The five data-splitting strategies applied to the HARIBOSS dataset:
 
 - [HARIBOSS splitting notebooks](https://github.com/AIDD-LiLab/SMARTBind/tree/main/data/splittings)
+  — `chain_split`, `pocket_split`, `ligand_split`, `pair_split`, `sequences_split`
 
 ## Fig. 3a-d and Supplementary Fig. 7a
 
 Scripts for reproducing SMARTBind-predicted binding sites and the corresponding
 figure panels:
 
-- [Temporal-set binding prediction](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig3/temporal_set_binding_prediction.ipynb)
-- [Fig. 3 figure reproduction](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig3/figure3_figure.ipynb)
+- [Temporal-set binding prediction](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig3/temporal_set_binding_prediction.py)
+  — `python temporal_set_binding_prediction.py`; applies the released 10-model
+  ensemble zero-shot to the 34 complexes and writes the per-case metrics
+  ([notebook form](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig3/temporal_set_binding_prediction.ipynb))
+- [Fig. 3a-d figures](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig3/figure3.ipynb) — draws the four panels
+  from `raw_data/Fig3/`
 - [Binding-site case visualization](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/supplementary/other_figures/binding_site_by_case_visualization.ipynb)
 
 ## Fig. 4
@@ -58,9 +83,13 @@ Scripts and outputs for reproducing virtual-screening performance on the
 time-dependent test set and the corresponding figure panels:
 
 - [Time-dependent virtual screening](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig4/time_dependent_vs.ipynb)
-- [Fig. 4 figure reproduction](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig4/figure4_figure.ipynb)
+- [Fig. 4b, g-j figures](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig4/figure4.ipynb) — draws the panels
+  from `raw_data/Fig4/`
 - [Time-dependent ranking scores](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig4/ranking_percentile_scores.txt)
 - [Case-study ranking scores](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig4/case_study_ranking_percentile_scores.txt)
+- [Fig. 4c / 4e case-study screening](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig4/case_study_vs.py)
+  — `python case_study_vs.py`; screens the five case-study RNAs against the same 1M library
+  and checks each SMARTBind cell of Fig. 4c and 4e against the published value.
 
 ## Fig. 4b
 
@@ -74,3 +103,12 @@ Analysis scripts for structural comparison between the time-dependent test set
 and the HARIBOSS dataset:
 
 - [Time-dependent test-set analysis](https://github.com/AIDD-LiLab/SMARTBind/tree/main/data/time_dependent_set)
+
+## Supplementary Fig. 10
+
+Zero-shot benchmarking on the ROBIN dataset: the leakage analysis that defines the
+21-target subset, and the SMARTBind rescreen on it.
+
+- [ROBIN benchmark overview](https://github.com/AIDD-LiLab/SMARTBind/tree/main/reproduce/supplementary/robin)
+- [ROBIN leakage analysis](https://github.com/AIDD-LiLab/SMARTBind/tree/main/reproduce/supplementary/robin/leakage)
+- [SMARTBind inference on ROBIN](https://github.com/AIDD-LiLab/SMARTBind/tree/main/reproduce/supplementary/robin/inference)

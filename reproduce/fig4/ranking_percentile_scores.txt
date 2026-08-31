@@ -99,4 +99,3 @@ Rank percentage: 0.0166999833000167%
 
 For 8SYK_TAC, the rank is 13134 out of 1000001
 Rank percentage: 1.3133986866013134%
-

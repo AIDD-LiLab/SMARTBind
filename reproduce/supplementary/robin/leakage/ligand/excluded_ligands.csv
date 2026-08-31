@@ -1,0 +1,9 @@
+excluded_smiles,side
+C(CCNCCCN)CN,ROBIN binder
+C(CNCc1ccc2ccccc2c1)c1c[nH]c2ccccc12,ROBIN binder
+C(CNc1ccc(c2C(c3c(ccc(c3C(c12)=O)O)O)=O)NCCNCCO)NCCO,ROBIN binder
+C1CC1N1C=C(C(O)=O)C(c2cc(c(cc12)N1CCNCC1)F)=O,ROBIN binder
+C1CNCCNCCCN(CCNC1)Cc1ccc(CN2CCCNCCNCCCNCC2)cc1,ROBIN binder
+CC(C)(C)c1cc(C=C(C#N)C#N)cc(C(C)(C)C)c1O,ROBIN binder
+CC(COc1ccccc1)N(CC[Cl])Cc1ccccc1,ROBIN binder
+CN1C(c2c(ncn2CCN)N(C)C1=O)=O,ROBIN binder
