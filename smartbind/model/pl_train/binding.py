@@ -6,10 +6,11 @@ import random
 import torch
 import wandb
 from pytorch_lightning import LightningModule
-from pytorch_lightning import seed_everything
 from torch import nn
 from torch.nn.init import kaiming_normal_
 
+from ...device import resolve_device
+from ...rng import seed_model_init, restore_rng
 from smartbind.model.binding_head import BindingPredictor
 from smartbind.model.RNAFM_pretrained import fm
 from smartbind.model.weighted_bce import WeightedBCELoss
@@ -36,6 +37,7 @@ class BindingPL(LightningModule):
                  fold_num: int = 1,
                  seed: int = 42,
                  vs_mode: bool = False,
+                 isolate_rng: bool = False,
                  ):
         '''
         :param device: 'cuda' or 'cpu'
@@ -54,13 +56,13 @@ class BindingPL(LightningModule):
         :param vs_mode: validation mode, where default is False
         '''
         super(BindingPL, self).__init__()
-        seed_everything(seed)
-        self.str_device = device
+        _rng_token = seed_model_init(seed, isolate=isolate_rng, verbose=not isolate_rng)
+        self.str_device = resolve_device(device)
         self.automatic_optimization = False
         self.gradient_clip_val = gradient_clip_val
 
-        self.rna_fm_model, rna_fm_alphabet = fm.pretrained.rna_fm_t12(device=device)
-        self.rna_fm_model = self.rna_fm_model.to(self.device)
+        self.rna_fm_model, rna_fm_alphabet = fm.pretrained.rna_fm_t12(device=self.str_device)
+        self.rna_fm_model = self.rna_fm_model.to(self.str_device)
         self.batch_converter = rna_fm_alphabet.get_batch_converter()
 
         smol_layers = [
@@ -72,7 +74,7 @@ class BindingPL(LightningModule):
             nn.BatchNorm1d(out_feature),
             nn.LeakyReLU(inplace=True),
         ]
-        self.smol_featurizer = nn.Sequential(*smol_layers).to(self.device)
+        self.smol_featurizer = nn.Sequential(*smol_layers).to(self.str_device)
 
         rna_layers = [
             nn.Linear(640, 512, bias=True),
@@ -83,7 +85,7 @@ class BindingPL(LightningModule):
             nn.BatchNorm1d(out_feature),
             nn.LeakyReLU(inplace=True),
         ]
-        self.rna_featurizer = nn.Sequential(*rna_layers).to(self.device)
+        self.rna_featurizer = nn.Sequential(*rna_layers).to(self.str_device)
         for layer in self.rna_featurizer:
             if isinstance(layer, nn.Linear):
                 kaiming_normal_(layer.weight, nonlinearity='leaky_relu')
@@ -96,7 +98,7 @@ class BindingPL(LightningModule):
             nn.BatchNorm1d(512),
             nn.LeakyReLU(inplace=True),
         ]
-        self.smol_binding_featurizer = nn.Sequential(*smol_binding_layers).to(self.device)
+        self.smol_binding_featurizer = nn.Sequential(*smol_binding_layers).to(self.str_device)
         self.binding_site_featurizer = BindingPredictor(smol_dim=512, rna_dim=640, hidden_dim=256, dropout_rate=0.2,
                                                         attention_dropout_rate=0.4).to(self.str_device)
         self.smol_binding_lr = smol_binding_lr
@@ -118,6 +120,19 @@ class BindingPL(LightningModule):
             if not os.path.exists(self.model_path):
                 os.makedirs(self.model_path)
             self.save_hyperparameters()
+
+        self.to(self.str_device)
+
+        restore_rng(_rng_token)
+
+    @property
+    def active_device(self):
+        """Where this model's parameters actually live.
+
+        Preferred over ``self.device`` in the inference paths: it is read straight off a
+        parameter, so it stays right even if something moves the model afterwards.
+        """
+        return next(self.parameters()).device
 
     def configure_optimizers(self):
         smol_binding_opt = torch.optim.AdamW(
@@ -583,7 +598,7 @@ class BindingPL(LightningModule):
 
     def predict_binding(self, rna_sequence, ligand):
         rna_sequence = rna_sequence.upper()
-        ligand = torch.tensor(ligand).to(self.device)
+        ligand = torch.tensor(ligand).to(self.active_device)
         self.eval()
         with torch.no_grad():
             # Handle long RNA sequences by chunking (same as _rna_encoder_val)
@@ -593,14 +608,14 @@ class BindingPL(LightningModule):
                 for chunk_sequence in chunks:
                     data = [('rna', chunk_sequence)]
                     _, _, batch_tokens = self.batch_converter(data)
-                    batch_tokens = batch_tokens.to(self.device)
+                    batch_tokens = batch_tokens.to(self.active_device)
                     results = self.rna_fm_model(batch_tokens, repr_layers=[12])
                     embeddings.append(results["representations"][12].squeeze(0)[1:-1])
                 rna_sequence_embedding = torch.cat(embeddings, dim=0)
             else:
                 data = [('rna', rna_sequence)]
                 _, _, batch_tokens = self.batch_converter(data)
-                batch_tokens = batch_tokens.to(self.device)
+                batch_tokens = batch_tokens.to(self.active_device)
                 results = self.rna_fm_model(batch_tokens, repr_layers=[12])
                 rna_sequence_embedding = results["representations"][12].squeeze(0)[1:-1]
 
@@ -644,7 +659,8 @@ class BindingPL(LightningModule):
         return smol_tokenized_list
 
     def _smol_processing(self, smol_fp2):
-        smol_fp2_tensor = torch.tensor(smol_fp2).float().to(self.str_device)
+        target = next(self.smol_featurizer.parameters()).device
+        smol_fp2_tensor = torch.tensor(smol_fp2).float().to(target)
 
         smol_embeddings = self.smol_featurizer(smol_fp2_tensor)
         smol_tokenized_list = smol_embeddings

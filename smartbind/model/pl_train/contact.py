@@ -1,7 +1,6 @@
 import io
 import os
 import pickle
-from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,13 +8,13 @@ import torch
 import wandb
 from PIL import Image
 from pytorch_lightning import LightningModule
-from pytorch_lightning import seed_everything
 from torch import nn
 
+from ...device import resolve_device
+from ...rng import seed_model_init, restore_rng
 from ..margin import MarginScheduledLossFunction, sigmoid_cosine_distance_test
 
 from ..RNAFM_pretrained import fm
-import json
 
 
 def rna_chain_for_ligand(rna_smol_map, ligand):
@@ -24,7 +23,8 @@ def rna_chain_for_ligand(rna_smol_map, ligand):
         rna_list, lig_list = pair_list[0], pair_list[1]
         if ligand in lig_list:
             out.extend(rna_list)
-    return list(set(out))
+    # sorted, not list(set(...)): see the note in smartbind/dataloader.py
+    return sorted(set(out))
 
 
 def unique_rna(rna_sequences_as_decoy):
@@ -55,17 +55,13 @@ class ContactPL(LightningModule):
                  model_save_folder: str = 'saved_model',
                  seed: int = 42,
                  vs_mode: bool = False,
+                 isolate_rng: bool = False,
                  save_name: str = 'train_score',
                  rna_smol_map: list = None,
                  ):
         super(ContactPL, self).__init__()
-        seed_everything(seed)
-        if rna_smol_map is not None:
-            self.rna_smol_map = rna_smol_map
-        else:
-            rna_smol_map_path = Path(__file__).resolve().parent / 'rna_smol_map.json'
-            with open(rna_smol_map_path, 'r') as f:
-                self.rna_smol_map = json.load(f)
+        _rng_token = seed_model_init(seed, isolate=isolate_rng, verbose=not isolate_rng)
+        self.rna_smol_map = rna_smol_map if rna_smol_map is not None else []
 
         self.automatic_optimization = False
         self.gradient_clip_val = gradient_clip_val
@@ -74,7 +70,7 @@ class ContactPL(LightningModule):
         self.rna_mlp_weight_decay = rna_mlp_weight_decay
         self.smol_mlp_lr = smol_mlp_lr
         self.smol_mlp_weight_decay = smol_mlp_weight_decay
-        self.str_device = device
+        self.str_device = resolve_device(device)
 
         self.rna_fm_model, rna_fm_alphabet = fm.pretrained.rna_fm_t12(device=device)
         self.rna_fm_model = self.rna_fm_model.to(self.str_device)
@@ -131,6 +127,8 @@ class ContactPL(LightningModule):
             if not os.path.exists(self.model_path):
                 os.makedirs(self.model_path)
             self.save_hyperparameters()
+
+        restore_rng(_rng_token)
 
     def training_step(self, batch, batch_idx):
         rna_sequences, match_smols, decoy_smols_list, rna_sequences_names, match_smols_name, _ = batch
@@ -381,6 +379,11 @@ class ContactPL(LightningModule):
             torch.save(self.state_dict(), self.model_path + '/best_model_loss.pth')
         self.validation_step_outputs.clear()
 
+    @property
+    def active_device(self):
+        """Where this model's parameters actually live; see BindingPL.active_device."""
+        return next(self.parameters()).device
+
     def configure_optimizers(self):
         rna_featurizer_opt = torch.optim.AdamW(self.rna_featurizer.parameters(),
                                                lr=self.rna_mlp_lr,
@@ -427,7 +430,8 @@ class ContactPL(LightningModule):
         return torch.split(rna_tokenized, 1, dim=0), token_embeddings_list
 
     def _smol_processing(self, smol_fp2):
-        smol_fp2_tensor = torch.tensor(smol_fp2).float().to(self.str_device)
+        target = next(self.smol_featurizer.parameters()).device
+        smol_fp2_tensor = torch.tensor(smol_fp2).float().to(target)
 
         smol_embeddings = self.smol_featurizer(smol_fp2_tensor)
         smol_tokenized_list = smol_embeddings

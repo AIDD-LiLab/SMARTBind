@@ -87,7 +87,7 @@ def parse_dict(dict, topk_decoy=100):
         rna_seq_list.append((f'{dict[key]["pdb_id"]}_{dict[key]["rna_chain_id"]}',
                              dict[key]['rna_chain_sequence']))
         match_smol_list.append(dict[key]['downloaded_ligand_smiles'])
-        match_smol_fp_list.append((dict[key]['ligand_id'], dict[key]['download_fp2'], dict[key]['decoy_smiles'][:topk_decoy]))
+        match_smol_fp_list.append((dict[key]['ligand_id'], dict[key]['fp2'], dict[key]['decoy_fp2'][:topk_decoy]))
         complex_id_list.append(dict[key]['pdb_id'])
         match_smol_id_list.append(dict[key]['ligand_id'])
         contact_index.append(dict[key]['contact_map_1d'])

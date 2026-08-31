@@ -1,7 +1,5 @@
 from torch.utils.data import Dataset, DataLoader
 import random
-import json
-from pathlib import Path
 
 
 def ligands_for_rna_chain(rna_smol_map, rna_chain):
@@ -10,7 +8,21 @@ def ligands_for_rna_chain(rna_smol_map, rna_chain):
         rna_list, lig_list = pair_list[0], pair_list[1]
         if rna_chain in rna_list:
             out.extend(lig_list)
-    return list(set(out))
+    # sorted, not list(set(...)): the result is only membership-tested, so order does not
+    # reach the numbers today, but set-of-strings order varies with PYTHONHASHSEED and this
+    # keeps it from mattering if anyone later iterates it
+    return sorted(set(out))
+
+
+def build_rna_smol_map(raw_dict):
+    """Group RNA chains by sequence and collect the ligands each group binds.
+
+    ``raw_dict`` is the training pickle as loaded, i.e. ``{pdb_id: {entry_id: record}}``.
+    Returns a list of ``([chain_id, ...], [ligand_id, ...])`` pairs, one per distinct RNA
+    sequence, used to keep a known binder of an RNA out of that RNA's decoy pool.
+    """
+    from .preprocess import build_rna_smol_map_from_raw_dict
+    return build_rna_smol_map_from_raw_dict(raw_dict)
 
 
 class RLDataset(Dataset):
@@ -27,7 +39,7 @@ class RLDataset(Dataset):
                  augmentation_factor=3,
                  replace_res_type=None,
                  rna_smol_map=None,
-                 rna_smol_map_path=None
+                 raw_dict=None
                  ):
         if non_binding_index_list is None:
             non_binding_index_list = []
@@ -41,11 +53,15 @@ class RLDataset(Dataset):
                 self.match_decoy_aug_map[match_mol_name] = decoy_mol
         if rna_smol_map is not None:
             self.rna_smol_map = rna_smol_map
+        elif raw_dict is not None:
+            self.rna_smol_map = build_rna_smol_map(raw_dict)
         else:
-            if rna_smol_map_path is None:
-                rna_smol_map_path = Path(__file__).resolve().parent / 'rna_smol_map.json'
-            with open(rna_smol_map_path, 'r') as f:
-                self.rna_smol_map = json.load(f)
+            raise ValueError(
+                "RLDataset needs the RNA-to-ligand map that keeps known binders out of "
+                "the decoy pool. Pass rna_smol_map=... (build_val_test_set(..., "
+                "return_rna_smol_map=True) returns it) or raw_dict=<the loaded training "
+                "pickle> to derive it. It cannot be inferred from a single split: two "
+                "chains sharing a sequence can sit in different splits.")
 
         self.random_decoy_num = random_decoy_num
         self.extra_decoy_num = extra_decoy_num

@@ -23,6 +23,54 @@ def tanimoto_similarity(one_hot_str1, one_hot_str2):
     return similarity
 
 
+def build_fp_matrix(fp_list):
+    """
+    Stack a list of one-hot fingerprints (str or list of int) into a bool matrix
+
+    Parameters
+    ----------
+    fp_list: list of (str or list of int)
+    Returns
+    -------
+    matrix: np.ndarray of bool, shape (n_fp, n_bits)
+    """
+    return np.array([[int(bit) for bit in fp] for fp in fp_list], dtype=bool)
+
+
+def top_decoy_indices(decoy_matrix, anchor_fp, top_num, tanimoto_threshold=0.5):
+    """
+    Vectorized version of top_decoys that returns the indices of the selected
+    decoys, so that the caller can pull both the fingerprints and the SMILES.
+
+    Same selection rule as top_decoys: sort all decoys by Tanimoto similarity to
+    the anchor in descending order, drop everything above the threshold, then
+    keep the first `top_num`.
+
+    Parameters
+    ----------
+    decoy_matrix: np.ndarray of bool, shape (n_decoy, n_bits)
+        Decoy library fingerprints, see build_fp_matrix
+    anchor_fp: str or list of int
+        One-hot fingerprint of the anchor molecule
+    top_num: int
+        Number of decoys to return
+    tanimoto_threshold: float
+        Only decoys with similarity <= this value are eligible
+    Returns
+    -------
+    indices: np.ndarray of int
+    """
+    anchor = np.array([int(bit) for bit in anchor_fp], dtype=bool)
+    intersection = decoy_matrix @ anchor.astype(np.int32)
+    union = decoy_matrix.sum(axis=1, dtype=np.int32) + int(anchor.sum()) - intersection
+    # union == 0 means both fingerprints are all-zero; treat as not eligible
+    similarity = np.divide(intersection, union, out=np.full(len(union), np.inf),
+                           where=union > 0)
+    order = np.argsort(-similarity, kind='stable')
+    eligible = order[similarity[order] <= tanimoto_threshold]
+    return eligible[:top_num]
+
+
 def top_decoys(decoy_lib, top_num, anchor_fp, tanimoto_threshold=0.5):
     """
     Find the top similar fingerprints in the decoy library
