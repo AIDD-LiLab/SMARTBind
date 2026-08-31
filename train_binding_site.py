@@ -8,7 +8,7 @@ from pytorch_lightning.loggers import WandbLogger
 from smartbind import BindingPL
 from smartbind.preprocess import build_val_test_set
 from smartbind.dataloader import RLDataLoader, RLDataset
-from smartbind.utils import check_device
+from smartbind.utils import lightning_accelerator, resolve_device
 from omegaconf import DictConfig, OmegaConf
 import hydra
 import logging
@@ -70,8 +70,9 @@ def binding_task_training(cfg: DictConfig) -> None:
                                     num_workers=cfg.data_params.num_workers,
                                     if_shuffle=True)
 
-    device = check_device(cfg.training_params.device)
-    logger.info(f'{device} is available for training')
+    device = resolve_device(cfg.training_params.device)
+    accelerator, devices = lightning_accelerator(device)
+    logger.info(f'training the binding site model on {device} (accelerator={accelerator}, devices={devices})')
 
     """
     Training the binding module with RNA foundation model fine-tuned.
@@ -92,7 +93,9 @@ def binding_task_training(cfg: DictConfig) -> None:
                                                 verbose=False,
                                                 mode="min")
 
-    binding_trainer = Trainer(max_epochs=cfg.training_params.max_epochs,
+    binding_trainer = Trainer(accelerator=accelerator,
+                              devices=devices,
+                              max_epochs=cfg.training_params.max_epochs,
                               callbacks=[binding_early_stop_callback],
                               logger=wandb_logger,
                               sync_batchnorm=True,
@@ -115,11 +118,16 @@ def binding_task_training(cfg: DictConfig) -> None:
                               seed=cfg.training_params.seed
                               ).to(device)
 
-    # load pre-trained contact model otherwise will load pretrained RNA-FM model as the base weight
-    binding_score_model_path = os.path.join(cfg.model_params.binding_score_model_path, f'fold{cfg.data_params.fold_num}.pth')
+    binding_score_model_dir = cfg.model_params.binding_score_model_path
+    if not os.path.isabs(binding_score_model_dir):
+        binding_score_model_dir = os.path.join(current_path, binding_score_model_dir)
+    binding_score_model_path = os.path.join(binding_score_model_dir, f'fold{cfg.data_params.fold_num}.pth')
     if not os.path.exists(binding_score_model_path):
-        logger.warning(f'Contact model path {binding_score_model_path} does not exist, '
-                       f'will load pretrained RNA-FM model as the base weight')
+        logger.warning(f'Contact model path {binding_score_model_path} does not exist, so the binding '
+                       f'score module will start from the pretrained RNA-FM weights instead of from a '
+                       f'trained SMARTBind binding score model. This is NOT the published Stage 2 setup; '
+                       f'set model_params.binding_score_model_path to the folder holding fold*.pth '
+                       f'(SMARTBind_weight after downloading the weights) if that was not intended.')
         binding_score_model_path = None
     binding_model.load_pretrained_model(model_path=binding_score_model_path,
                                         device=device,

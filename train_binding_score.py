@@ -11,7 +11,7 @@ from pytorch_lightning.loggers import WandbLogger
 from smartbind import ContactPL
 from smartbind.preprocess import build_val_test_set
 from smartbind.dataloader import RLDataLoader, RLDataset
-from smartbind.utils import check_device
+from smartbind.utils import lightning_accelerator, resolve_device
 
 logger = logging.getLogger(__name__)
 
@@ -85,8 +85,9 @@ def contact_task_training(cfg: DictConfig) -> None:
         if_shuffle=True,
     )
 
-    device = check_device(cfg.training_params.device)
-    logger.info(f'{device} is available for training')
+    device = resolve_device(cfg.training_params.device)
+    accelerator, devices = lightning_accelerator(device)
+    logger.info(f'training the binding score model on {device} (accelerator={accelerator}, devices={devices})')
 
     wandb.login(key=cfg.wandb_params.key)
     wandb.init(
@@ -110,6 +111,8 @@ def contact_task_training(cfg: DictConfig) -> None:
         mode='min',
     )
     contact_trainer = Trainer(
+        accelerator=accelerator,
+        devices=devices,
         max_epochs=cfg.training_params.max_epochs,
         callbacks=[contact_early_stop_callback],
         logger=wandb_logger,
