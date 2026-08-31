@@ -23,7 +23,7 @@ swapping-test experiments:
 
 RNA- and ligand-swapping tests on the HARIBOSS 5-fold sequence-based split:
 
-- [Swapping tests](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/supplementary/swap_test/swapping_test.py)
+- [Swapping tests](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/supplementary/other_figures/swapping_test.py)
   — `python swapping_test.py --dataset hariboss --decoy-set pdb`
 
 ## Fig. 2b
@@ -43,8 +43,6 @@ Scripts for reproducing benchmark performance on the HARIBOSS 5-fold cross-valid
 
 - [Fig. 2c-e figures](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig2/figure2cde.ipynb) — draws the three panels
   from `raw_data/Fig2/`
-- [Supplementary Fig. 4a-c figures](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/supplementary/cv_performance/supplementary_figure4.ipynb)
-  — draws the three panels from `raw_data/SupplementaryFig4/`
 - [HARIBOSS 5-fold cross-validation inference](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig2/performance_reproduce_5fd_hariboss.py)
   — `python performance_reproduce_5fd_hariboss.py`; runs all ten split/weight pairs,
   prints both the per-sample (Fig. 2c) and fold-wise (Fig. 2d) summaries and checks
@@ -69,10 +67,9 @@ The five data-splitting strategies applied to the HARIBOSS dataset:
 Scripts for reproducing SMARTBind-predicted binding sites and the corresponding
 figure panels:
 
-- [Temporal-set binding prediction](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig3/temporal_set_binding_prediction.py)
-  — `python temporal_set_binding_prediction.py`; applies the released 10-model
-  ensemble zero-shot to the 34 complexes and writes the per-case metrics
-  ([notebook form](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig3/temporal_set_binding_prediction.ipynb))
+- [Temporal-set binding prediction](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig3/temporal_set_binding_prediction.ipynb)
+  — applies the released 10-model ensemble zero-shot to the 34 complexes and
+  reports the per-case AUROC
 - [Fig. 3a-d figures](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig3/figure3.ipynb) — draws the four panels
   from `raw_data/Fig3/`
 - [Binding-site case visualization](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/supplementary/other_figures/binding_site_by_case_visualization.ipynb)
