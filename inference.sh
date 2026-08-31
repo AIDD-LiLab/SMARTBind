@@ -1,7 +1,7 @@
 conda activate SMARTBind_env
 
 python inference.py \
-    --rna "GGCGUAUAUCCUUAAUGAUAUGGUUUAAGGGCAAUACAUAGAAACCACAAAUUUCUUACUGCGUC" \
+    --rna "GACAGCUGCUGUC" \
     --smiles "notebook/ligand_library.txt" \
     --model_path "SMARTBind_weight" \
     --output "notebook/binding_score.txt" \

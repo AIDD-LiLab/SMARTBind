@@ -25,6 +25,7 @@ from multiprocessing import Pool, cpu_count
 from torch.nn.functional import cosine_similarity
 from smartbind.preprocess import convert_smiles_to_pf2
 from smartbind import load_smartbind_models, logger
+from smartbind.device import resolve_device
 
 
 def virtual_screening(
@@ -129,7 +130,10 @@ if __name__ == '__main__':
     parser.add_argument('--smiles', type=str, required=True, help='Path to SMILES file (one per line)')
     parser.add_argument('--model_path', type=str, required=True, help='Path to SmartBind model weights directory')
     parser.add_argument('--output', type=str, default='binding_scores.txt', help='Output file path')
-    parser.add_argument('--device', type=str, default='cpu', help='Device: cpu or cuda')
+    parser.add_argument('--device', type=str, default='auto',
+                        help="Device: 'cpu', 'gpu' (alias for 'cuda'), 'cuda:N', or 'auto' "
+                             "(default: a GPU when one is visible, otherwise CPU). Asking "
+                             "for a GPU on a machine without one falls back to CPU.")
     parser.add_argument('--batch_size', type=int, default=10000, help='Batch size for ligand inference')
     parser.add_argument('--num_workers', type=int, default=1, help='Number of parallel workers for SMILES to FP2 conversion')
     args = parser.parse_args()
@@ -139,7 +143,7 @@ if __name__ == '__main__':
         smiles_file=args.smiles,
         model_path=args.model_path,
         output_file=args.output,
-        device=args.device,
+        device=resolve_device(args.device),
         batch_size=args.batch_size,
         num_workers=args.num_workers,
     )

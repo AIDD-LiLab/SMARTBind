@@ -1,8 +1,6 @@
 # SMARTBind
 
-This is the official repository for SMARTBind model. SMARTBind is a sequence-based RNA-ligand interaction prediction 
-method by leveraging contrastive learning and RNA foundation model. It can be used for RNA-ligand interaction virtual screening
-and binding site prediction for the potential ligand binders.
+This is the official repository for SMARTBind model. SMARTBind is a sequence-based RNA-ligand interaction prediction method by leveraging contrastive learning and RNA foundation model. It can be used for RNA-ligand interaction virtual screening and binding site prediction for the potential ligand binders.
 
 
 ## System requirements
@@ -14,17 +12,19 @@ SMARTBind is distributed as a conda environment. Exact pinned versions are in
 
 | Component         | Version                                       |
 |-------------------|-----------------------------------------------|
-| Operating system  | Linux x86-64 (Ubuntu 20.04 / 22.04 LTS)       |
-| Python            | 3.9.21                                        |
-| PyTorch           | 2.5.1 (CUDA 12.4 build)                       |
-| CUDA runtime      | 12.4                                          |
-| cuDNN             | 9.1.0                                         |
-| PyTorch Lightning | 2.5.0.post0                                   |
+| Operating system  | Linux x86-64 (Ubuntu 20.04 / 22.04 LTS, RHEL 9) |
+| Python            | 3.9                                           |
+| PyTorch           | 2.0.1 (CUDA 11.8 build)                       |
+| CUDA runtime      | 11.8                                          |
+| PyTorch Lightning | 2.0.9                                         |
 
 ### Tested on
 
-| OS                                        | Python  | PyTorch | CUDA | GPU                          | Driver |
+| OS                                        | Python  | PyTorch | CUDA | GPU / CPU                    | Driver |
 |-------------------------------------------|---------|---------|------|------------------------------|--------|
+| RHEL 9.8 (fresh `environment.yml` install)| 3.9.23  | 2.0.1   | 11.8 | AMD EPYC 75F3, CPU only      | —      |
+| RHEL 9.8                                  | 3.9.18  | 2.0.1   | 11.8 | NVIDIA L4 (24 GB)            | 580.178.04 |
+| RHEL 9.8                                  | 3.9.21  | 2.5.1   | 12.4 | NVIDIA L4 (24 GB)            | 580.178.04 |
 | Ubuntu 22.04.5 LTS (native)               | 3.9.21  | 2.5.1   | 12.4 | NVIDIA RTX 3090 (24 GB)      | 591.86 |
 | Ubuntu 22.04.5 LTS (WSL2 on Windows 11)   | 3.9.21  | 2.5.1   | 12.4 | NVIDIA RTX 3090 (24 GB)      | 591.86 |
 
@@ -34,7 +34,7 @@ SMARTBind is distributed as a conda environment. Exact pinned versions are in
 |--------------|--------------------------------------------------------|--------------------------------|---------------------------------------------------------------------------------------------|
 | GPU          | NVIDIA, ≥ 8 GB VRAM, compute capability ≥ 7.0          | RTX 3090 / A100, 24+ GB VRAM   | Required for training. Inference can fall back to CPU with `--device cpu`.                  |
 | System RAM   | 8 GB                                                   | 16 GB                          | Conda environment solve peaks at ≈ 4 GB.                                                    |
-| Disk space   | 12 GB free                                             | 25 GB free                     | Conda env (~ 5 GB) + weights (~ 2.6 GB) + Zenodo bundle (~ 2.6 GB) + training outputs.       |
+| Disk space   | 18 GB free                                             | 30 GB free                     | Conda env (~ 8.2 GB) + Zenodo download (~ 2.6 GB, expands to ~ 4.4 GB: 10 checkpoints + dataset pickles) + training outputs. |
 | Network      | HTTPS to github.com, zenodo.org, drive.google.com      | —                              | RNA-FM weights additionally require reachability to `proj.cse.cuhk.edu.hk` unless mirrored. |
 | CPU          | 1 cores                                                | 4+ cores                       | Affects only SMILES → FP2 preprocessing throughput.                                          |
 
@@ -48,7 +48,7 @@ cd SMARTBind
 ### Install Required Packages
 To install the required packages, run the following command:
 ```bash
-# cuda 12.4 is required to satisfy the torch version
+# pytorch-cuda=11.8 in environment.yml; drop that line for a CPU-only install
 conda env create -f environment.yml
 conda activate SMARTBind_env
 ```
@@ -61,7 +61,6 @@ On a workstation with a 100 Mbps internet link and an NVMe-class SSD:
 |---------------------------------------------------------------|-----------------|
 | `conda env create -f environment.yml` (libmamba solver)       | ~ 7–10 min      |
 | Pretrained-weight download from Zenodo (~ 2.6 GB)             | ~ 5 min         |
-| Pretrained-weight download via gdown (~ 2.6 GB, alternative)  | ~ 10–15 min     |
 | **Total cold install**                                        | **~ 15–25 min** |
 
 For faster solves, install libmamba first:
@@ -84,12 +83,12 @@ mkdir -p ~/.cache/torch/hub/checkpoints
 ```
 
 ## Inference with SMARTBind
-Downloaded pretrained SMARTBind models from [Zenodo](https://zenodo.org/records/20252150). 
-An alternative way is to use `gdown` as follows if you are working in a server without browser access:
+Download the pretrained SMARTBind models from [Zenodo](https://zenodo.org/records/20252150)
+and unpack `SMARTBind_weight.zip` at the repository root:
+
 ```bash
 mkdir SMARTBind_weight
 cd SMARTBind_weight
-gdown --id 1z0PD0CRMAs1Q43g836JMzh0VFcAcoG-l
 unzip SMARTBind_weight.zip
 rm SMARTBind_weight.zip
 ```
@@ -149,26 +148,34 @@ df[["average"]].sort_values("average", ascending=False).to_csv(
 ```
 #### Expected demo output
 
-Running the example above with the 64 nt RNA from `inference.sh` and
-`notebook/ligand_library.txt` (27 ligands) produces a TSV with two columns
-(`SMILES`, `Binding_Score`). The first three rows:
+The snippet above scores `notebook/ligand_library.txt` (27 ligands) against the
+13 nt RNA `GACAGCUGCUGUC` and writes `binding_score.txt`, sorted by score
+descending, with the columns `Ligand_ID` and `Binding_Score`. The first three rows:
 
 ```
-SMILES                                                       Binding_Score
-[H]/N=C(\N)/Nc1ccc(cc1)C(=O)Oc2ccc(cc2)N/C(=N\[H])/N         -0.4962
-c1cc(ccc1C2=NCCN2CCN)C(=O)Nc3ccc(cc3)C4=NCCN4                -0.4377
-[H]/N=C(\c1ccc2c(c1)c(cc(n2)C)Nc3cccc(c3)OC)/N               -0.2829
+Ligand_ID                                                     Binding_Score
+[H]/N=C(\c1ccc2c(c1)c(cc(n2)C)Nc3cccc(c3)OC)/N                0.6115
+c1cc(ccc1C2=NCCN2CCN)C(=O)Nc3ccc(cc3)C4=NCCN4                 0.5477
+CC(=O)C1=C(C)NC(C(=O)NCCCN2C=CN=C2)=C1C                       0.5422
 ```
 
-Scores are ensemble-averaged cosine similarities in the range `[-1, +1]`; on
-this demo input they fall in `[-0.633, -0.283]` with mean `-0.495`.
+Scores are ensemble-averaged cosine similarities in the range `[-1, +1]`.
+
+`bash inference.sh` runs the same RNA and the same 27 ligands through
+`inference.py` and writes `notebook/binding_score.txt`. The scores are identical
+to the snippet's; only the presentation differs, because `inference.py` writes
+them in library order rather than sorted and heads the first column `SMILES`
+rather than `Ligand_ID`.
 
 #### Expected demo run time
 
-| Demo                                                          | Hardware                | Wall-clock           |
-|---------------------------------------------------------------|-------------------------|----------------------|
-| README example (64 nt RNA × 27 ligands × 10-fold ensemble)    | NVIDIA RTX 3090, 24 GB  | ~ 31 s               |
-| README example (same input, CPU only)                          | AMD Ryzen 7 5800X, 8 cores / 16 threads | ~ 19 s |
+| Demo                                                            | Hardware                | Wall-clock |
+|-----------------------------------------------------------------|-------------------------|------------|
+| README example (13 nt RNA × 27 ligands × 10-fold ensemble)      | NVIDIA RTX 3090, 24 GB  | ~ 31 s     |
+| README example (same input, CPU only)                            | AMD Ryzen 7 5800X, 8 cores / 16 threads | ~ 19 s |
+| `bash inference.sh` (same input), CPU only, measured             | AMD EPYC 75F3, 4 cores  | ~ 20 s     |
+
+Most of that is loading the ten checkpoints; the scoring itself is about 1 s.
 
 
 ### Binding site prediction
@@ -223,11 +230,7 @@ notebooks.
 
 ## Training Dataset
 ### Preprocessed Dataset
-The processed dataset used for this work can be downloaded from the [Zenodo](https://zenodo.org/records/20252150).
-- 10-fold RNAmigos1 random split training dataset can be downloaded from https://drive.google.com/file/d/1iQBwmtlKUzaxSdl58oEeruMSskoJcXzy/view?usp=sharing.
-- 10-fold HARIBOSS random split training datasets can be downloaded from https://drive.google.com/file/d/1oyf7Tr2I_Yx2vHibymb1_fi0Lt8SiK_0/view?usp=sharing.
-- All the splits for HARIBOSS training datasets can be downloaded from https://drive.google.com/drive/folders/1j7QMGHKyhpJLasyXLjYZ2Db9SbvKNKbR?usp=sharing.
-- All the splits for the GerNA-Bind subset of the HARIBOSS training datasets can be downloaded from https://drive.google.com/drive/folders/1V5jDPI4scKlNuW9RbB7uS90xDNT15Oke?usp=sharing.
+The processed dataset used for this work can be downloaded from the [Zenodo](https://zenodo.org/records/20252150), including 10-fold RNAmigos1 random split training dataset, 10-fold HARIBOSS random split training dataset, all the splits for HARIBOSS training datasets, all the splits for the GerNA-Bind subset of the HARIBOSS training datasets.
 
 To pretraining the model, please download the dataset and put it in the `data` folder.
 
@@ -245,7 +248,7 @@ pre-trained binding score model.
 python train_binding_score.py
 ```
 #### Training with ligand-specific decoy augmentation
-Please refer to the `notebook/decoy_augmentation.ipynb` for building decoy augmented training data, processed `hariboss_merged_10fd_with_decoys.pkl`
+Please refer to the `notebook/augmentation_data.ipynb` for building decoy augmented training data, processed `hariboss_10fd_with_decoys.pkl`
 is also provided. By modifying `data_params.decoy_num` and `data_params.extra_decoy_num` to adjust the proportion of native
 negative decoys and augmented decoys during training, our default setting is 48:24. By setting 72:0, it will be equivalent to training without decoy augmentation.
 
@@ -263,7 +266,6 @@ folder to preprocess your dataset.
 ```bash
 python train_binding_site.py
 ```
-
 
 ## Acknowledgements
 We thank the authors for making the following packages, software, and models open-sourced and easy to implement:

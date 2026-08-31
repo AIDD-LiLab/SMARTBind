@@ -15,7 +15,7 @@ training_params:
 model_params:
   out_feature: 256
   binding_positive_weight: 12
-  binding_score_model_path: './pretrained_binding_score_weight'
+  binding_score_model_path: 'SMARTBind_weight'
   training_mode: 'binding_continual_train'
 
 data_params:
@@ -23,7 +23,7 @@ data_params:
   data_aug_replace_ratio: 0.15
   data_aug_factor: 0
   num_workers: 2
-  training_data: 'training_data/hariboss_merged_10fd_with_decoys.pkl'
+  training_data: 'data/hariboss/hariboss_10fd_with_decoys.pkl'
 
 wandb_params:
   key: 'wandb_api_key'

@@ -25,7 +25,7 @@ data_params:
   data_aug_replace_ratio: 0.15
   data_aug_factor: 3
   num_workers: 2
-  training_data: "training_data/hariboss_merged_10fd_with_decoys.pkl"
+  training_data: "data/hariboss/hariboss_10fd_with_decoys.pkl"
 
 wandb_params:
   key: 'wandb_api_key'
