@@ -1,5 +1,5 @@
 module load conda
-conda activate SmartBind_env
+conda activate SMARTBind_env
 
 python df_script.py
 

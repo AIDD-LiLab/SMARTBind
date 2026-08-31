@@ -28,8 +28,7 @@ Jupyter notebooks used to construct and validate the 5-fold cross-validation HAR
 - `ligand_split.ipynb`: Ligand-existence split, ensuring no overlap between small molecules in the training and test sets. 
 - `pair_split.ipynb`: Pair-based split, ensuring no overlap between both RNA targets and small molecules in the training and test sets.
 
-The training data for all the splits above can be downloaded from https://drive.google.com/drive/folders/1j7QMGHKyhpJLasyXLjYZ2Db9SbvKNKbR?usp=sharing.
-The GerNA-Bind subset of the training data can be downloaded from https://drive.google.com/drive/folders/1V5jDPI4scKlNuW9RbB7uS90xDNT15Oke?usp=sharing.
+The training data for all the splits and the GerNA-Bind subset of the training data can be downloaded from Zenodo, please refer to the main README.
 
 ### `time_dependent_set/`
 
@@ -40,9 +39,9 @@ full construction details.
 - `time_dependent_test_set.csv`: main temporal benchmark table with PDB IDs,
   ligands, RNA chains, sequences, and SMILES.
 - `case_study_test_set.csv`: small case-study subset used for focused analysis.
-- `mmseq_cal.py`: script for MMseqs2 sequence-similarity checks against the
-  training set.
+- `sequence_similarity_mmseqs/`: MMseqs2 sequence-similarity check of the 34 test RNAs
+  against the training set (script, results and README).
 - `analysis.ipynb`: notebook for summary statistics and plotting.
-- `structure_analysis/`: RMalign chain- and pocket-level similarity matrices and
+- `structure_analysis/`: RMalign chain-level similarity matrices and
   nearest-neighbor summaries.
 
