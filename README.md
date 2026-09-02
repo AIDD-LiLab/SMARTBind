@@ -79,7 +79,6 @@ step, place the weight file manually:
 ```bash
 mkdir -p ~/.cache/torch/hub/checkpoints
 # Place RNA-FM_pretrained.pth here (≈ 398 MB).
-# Authors: replace this comment with a persistent (Zenodo) mirror once available.
 ```
 
 ## Inference with SMARTBind
