@@ -83,7 +83,7 @@ mkdir -p ~/.cache/torch/hub/checkpoints
 ```
 
 ## Inference with SMARTBind
-Download the pretrained SMARTBind models from [Zenodo](https://zenodo.org/records/20252150)
+Download the pretrained SMARTBind models from [Zenodo](https://zenodo.org/records/22185571)
 and unpack `SMARTBind_weight.zip` at the repository root:
 
 ```bash
@@ -230,7 +230,7 @@ notebooks.
 
 ## Training Dataset
 ### Preprocessed Dataset
-The processed dataset used for this work can be downloaded from the [Zenodo](https://zenodo.org/records/20252150), including 10-fold RNAmigos1 random split training dataset, 10-fold HARIBOSS random split training dataset, all the splits for HARIBOSS training datasets, all the splits for the GerNA-Bind subset of the HARIBOSS training datasets.
+The processed dataset used for this work can be downloaded from the [Zenodo](https://zenodo.org/records/22185571), including 10-fold RNAmigos1 random split training dataset, 10-fold HARIBOSS random split training dataset, all the splits for HARIBOSS training datasets, all the splits for the GerNA-Bind subset of the HARIBOSS training datasets.
 
 To pretraining the model, please download the dataset and put it in the `data` folder.
 
