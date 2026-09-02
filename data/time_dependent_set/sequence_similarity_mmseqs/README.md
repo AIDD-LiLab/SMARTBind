@@ -9,7 +9,7 @@ python mmseq_cal.py          # needs `mmseqs` on PATH (or $MMSEQS); run with MMs
 ```
 
 Also needs the HARIBOSS training set (`data/hariboss/hariboss_10fd_with_decoys.pkl`,
-from the Zenodo record linked in the repository README) — set `SMARTBIND_HARIBOSS_PKL`
+from the Zenodo record linked in the repository README). Set `SMARTBIND_HARIBOSS_PKL`
 if you keep it elsewhere.
 
 ## Criterion
@@ -46,12 +46,10 @@ All five carry ligand **53D**, all are 19-nt RNAs, and each matches a training c
 holds the 9 pairs that meet the criterion.
 
 These five are what the **RNA-filtered** evaluation subset removes, alongside the
-chain-level RMscore filter — see `../structure_analysis/`. The resulting per-case
-flags ship with the figure that uses them, as the
-`chain_structure_similar_to_training`, `rna_sequence_similar_to_training`,
-`ligand_present_in_training` and `passes_rna_filter` columns of
-`raw_data/Fig3/Fig3c_auroc_auprc_by_filter_scheme_per_case.csv`,
-which `reproduce/fig3/figure3.ipynb` reads to build the four evaluation subsets.
+chain-level RMscore filter; see `../structure_analysis/`. The resulting per-case
+flags are what `reproduce/fig3/figure3.ipynb` uses to build the four evaluation
+subsets: `chain_structure_similar_to_training`, `rna_sequence_similar_to_training`,
+`ligand_present_in_training` and `passes_rna_filter`.
 
 `query_temporal.fasta` and `target_training.fasta` are intermediates the script
 regenerates from `../time_dependent_test_set.csv` and the training pickle, so they are

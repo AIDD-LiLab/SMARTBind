@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SMARTBind on the HARIBOSS 5-fold cross-validation splits — the numbers behind
+"""SMARTBind on the HARIBOSS 5-fold cross-validation splits: the numbers behind
 Fig. 2c-e and Supplementary Fig. 4a-b.
 
 Ten runs: five data-splitting strategies, each on the full HARIBOSS set and on the
@@ -22,7 +22,7 @@ Inputs, all released with the paper:
     SMARTBind_weight/cross_validation/   the 50 cross-validation checkpoints
 
 The cross-validation checkpoints are separate from the 10-model ensemble in
-SMARTBind_weight/ — they are the models trained on each split, 5 folds each.
+SMARTBind_weight/. They are the models trained on each split, 5 folds each.
 
 Usage
     python performance_reproduce_5fd_hariboss.py                        # all ten runs

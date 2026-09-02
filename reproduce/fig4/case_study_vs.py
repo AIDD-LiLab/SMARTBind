@@ -142,11 +142,11 @@ def main():
     worst = checked.abs_diff.max()
     bad = checked[checked.abs_diff > a.tolerance]
     if len(bad):
-        print(f"\nMISMATCH — {len(bad)} of {len(checked)} cells differ from the published "
+        print(f"\nMISMATCH: {len(bad)} of {len(checked)} cells differ from the published "
               f"value by more than {a.tolerance} percentage points (worst {worst:.2e}):")
         print(bad.to_string(index=False))
         return 1
-    print(f"\nPASS — all {len(checked)} SMARTBind cells of Fig. 4c and Fig. 4e reproduce "
+    print(f"\nPASS: all {len(checked)} SMARTBind cells of Fig. 4c and Fig. 4e reproduce "
           f"within {a.tolerance} percentage points (worst {worst:.2e}).")
     print("Fig. 4e's two columns, 5E54 (apo) and 4TZX (holo), are the same sequence and "
           "therefore the same value.")

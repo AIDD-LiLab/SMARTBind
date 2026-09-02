@@ -17,7 +17,7 @@ Every file covers all 21 targets and all 2,681 target–binder pairs.
 
 ## Why these are shipped as results rather than scripts
 
-All three were scored against **this exact decoy pool** — the 22,368 SMM non-binders in
+All three were scored against **this exact decoy pool**: the 22,368 SMM non-binders in
 `../data/decoys.smi`, after the leakage filter. Rank percentile is defined against the
 pool, so removing 42 decoys changes every value; the published 26-target scores could
 not simply be subsetted, and each method had to be re-run by whoever held its weights.

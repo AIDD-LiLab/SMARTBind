@@ -13,7 +13,7 @@ leakage/
 
 Both scripts need the HARIBOSS training set
 (`data/hariboss/hariboss_10fd_with_decoys.pkl`, from the Zenodo record linked in the
-repository README) — set `SMARTBIND_HARIBOSS_PKL` if you keep it elsewhere. Each script
+repository README). Set `SMARTBIND_HARIBOSS_PKL` if you keep it elsewhere. Each script
 ships its outputs, so the conclusions can be checked without re-running anything.
 
 ---
@@ -30,8 +30,8 @@ Upstream data, unmodified by us. Full provenance and checksums are in `../README
 | `robin_rna_targets.csv` | ROBIN's own target table, incl. the 3D-motif annotation | transcribed from ROBIN; motif column cross-checked against GerNA-Bind's per-target keys (26/26 agree) |
 
 > `robin_rna_targets.csv` writes `ENE_A9` as a two-strand construct
-> (`AAAAAAAAA and GGCUGGG...`). `sequences.fasta` — which is what is actually screened
-> and aligned — carries only the second strand. The table column is descriptive; nothing
+> (`AAAAAAAAA and GGCUGGG...`). `sequences.fasta`, which is what is actually screened
+> and aligned, carries only the second strand. The table column is descriptive; nothing
 > downstream reads it for sequence.
 
 ROBIN's target table lists 27 RNAs. `RRE2B_MeA` is `RRE2B` carrying two
@@ -60,7 +60,7 @@ default of 15, which cannot seed on RNA targets of 10–84 nt.
 
 `mmseqs_results.csv` holds all 5,181 scored hits; `robin_vs_training_BEST_HITS.csv` holds
 the 39 pairs that meet the criterion. Four of the five are riboswitches essentially
-identical to a training chain over their whole length —
+identical to a training chain over their whole length:
 
 | ROBIN target | best training chain | identity | query cov | target cov |
 |---|---|---|---|---|
@@ -70,7 +70,7 @@ identical to a training chain over their whole length —
 | SAM_ll | `2qwy_A_H_SAM_100` | 90.1% | 98.1% | 98.1% |
 | TERRA | `3mij_A_D_R14_30` | 100.0% | 100.0% | 83.3% |
 
-— and TERRA is a 10-nt telomeric repeat sitting inside a 12-nt training chain.
+TERRA is a 10-nt telomeric repeat sitting inside a 12-nt training chain.
 
 `query.fasta` and `target_training.fasta` are intermediates the script regenerates from
 the ROBIN FASTA and the training pickle, so they are not tracked.
@@ -100,11 +100,11 @@ Four sets are crossed (`ligand_overlap_summary.csv`):
 ligand ID and how many complexes it appears in.
 
 The compounds removed downstream are listed in `excluded_ligands.csv` (**8** ROBIN
-binders — 1 matching a training binder, 7 matching an augmented decoy) and
-`excluded_decoys.csv` (**42** SMM decoys — 6 training binders, 37 augmented decoys, one
+binders: 1 matching a training binder, 7 matching an augmented decoy) and
+`excluded_decoys.csv` (**42** SMM decoys: 6 training binders, 37 augmented decoys, one
 molecule matching both). The two lists do not overlap, so **50 distinct ROBIN compounds**
 are removed in total.
 
 The 8 excluded binders account for 15 target–binder pairs, 14 of them on the 21 targets
-that survive the RNA filter — which is why per-target binder counts drop by 1–2 relative
+that survive the RNA filter, which is why per-target binder counts drop by 1–2 relative
 to the official release (e.g. EWSR1 292 → 291, AKTIP 223 → 221).

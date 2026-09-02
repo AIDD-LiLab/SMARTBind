@@ -11,7 +11,7 @@ percentile and AUROC.
     --dataset hariboss    HARIBOSS 10-fold random split
                           weights: the released 10-model ensemble, SMARTBind_weight/
 
-The HARIBOSS arm is not reported in the manuscript -- Fig. 2b evaluates the same
+The HARIBOSS benchmark is not reported in the manuscript -- Fig. 2b evaluates the same
 10-fold split against the DecoyFinder and DeepCoy libraries instead, and Fig. 2c-e
 use the 5-fold splits. It is here because it is the natural companion number to
 the RNAmigos1 benchmark: the same protocol on the paper's own dataset.
@@ -166,8 +166,8 @@ def summarise(values):
     return v.mean(), np.median(v), v.std(ddof=1) if v.size > 1 else 0.0
 
 
-# Published per-sample rank percentile, from raw_data/Fig2/Fig2a_summary.csv (the same
-# numbers appear in Supplementary Fig. 17a). The HARIBOSS 10-fold arm is deliberately
+# Published per-sample rank percentile, as reported for Fig. 2a (the same numbers appear
+# in Supplementary Fig. 17a). The HARIBOSS 10-fold benchmark is deliberately
 # absent: the paper does not report it, so there is nothing to check that run against.
 PUBLISHED = {
     ("rnamigos1", "pdb"): (765, 0.8256, 0.2256),
@@ -211,7 +211,7 @@ def main():
         out_dir.mkdir(parents=True, exist_ok=True)
         started = time.time()
         print("=" * 78)
-        print(f"{cfg['title']} — benchmark")
+        print(f"{cfg['title']}: benchmark")
         print("=" * 78)
         print(f"data       {data}")
         print(f"weights    {weights}")
@@ -256,7 +256,7 @@ def main():
         fold_rp = [f["mean_rank_percentile"] for f in per_fold]
         fold_au = [f["mean_auroc"] for f in per_fold]
         lines = [
-            f"{cfg['title']} — decoy set: {decoy_set}",
+            f"{cfg['title']}, decoy set: {decoy_set}",
             f"  pairs {len(records):,} over {len(args.folds)} folds, "
             f"mean {np.mean([r['n_decoys'] for r in records]):.1f} decoys/pair",
             "",
@@ -275,7 +275,7 @@ def main():
         # ---- self-check against the published values, where the paper reports them ----
         want = PUBLISHED.get((args.dataset, decoy_set))
         if want is None:
-            print("  (no published value for this arm: the HARIBOSS 10-fold benchmark is\n"
+            print("  (no published value for this run: the HARIBOSS 10-fold benchmark is\n"
                   "   not reported in the paper, so there is nothing to check against)")
             continue
         n_pub, mean_pub, sd_pub = want
@@ -292,7 +292,7 @@ def main():
                             f"mean delta {deltas['mean']:.2e}, sd delta {deltas['sd']:.2e}")
 
     if verdicts:
-        print(f"\nMISMATCH -- {len(verdicts)} arm(s) differ from the published values:")
+        print(f"\nMISMATCH -- {len(verdicts)} value(s) differ from the published numbers:")
         for v in verdicts:
             print(f"  {v}")
         return 1

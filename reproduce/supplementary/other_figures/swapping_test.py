@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""RNA- and ligand-swapping tests — Supplementary Fig. 5.
+"""RNA- and ligand-swapping tests for Supplementary Fig. 5.
 
-One script for all four published arms; it replaces the four notebooks that used
+One script for all four published tests; it replaces the four notebooks that used
 to live here (`{rna,ligand}_swapping_test_{hariboss,rnamigos1}.ipynb`), which
 duplicated the same protocol with different inputs.
 
@@ -10,9 +10,9 @@ duplicated the same protocol with different inputs.
     --dataset rnamigos1   RNAmigos1 10-fold random split, 10 folds
                           (Supplementary Fig. 5c-d)
 
-Both swaps are measured in the same run: the "without swapping" arm is scored
+Both swaps are measured in the same run: the "without swapping" baseline is scored
 once and both are compared against it, which is also what the published table
-shows — the panels quote the same baseline.
+shows: the panels quote the same baseline.
 
 What a swap is
     RNA swap     each positive test pair keeps its ligand and its decoys, but
@@ -20,8 +20,8 @@ What a swap is
     ligand swap  each pair keeps its RNA and its decoys, but its true ligand is
                  replaced by another test ligand
 
-Both are a global derangement over the fold's distinct RNAs / distinct ligands —
-a permutation with no fixed point, so nothing is left paired with itself —
+Both are a global derangement over the fold's distinct RNAs / distinct ligands,
+i.e. a permutation with no fixed point, so nothing is left paired with itself,
 redrawn K times. The decoy pool is never touched, so the label structure of every
 ranking problem is unchanged; only the positive is made wrong. A model that had
 learned real RNA-ligand complementarity should collapse; one that had learned
@@ -45,7 +45,7 @@ Metrics, each computed per fold and then averaged unweighted over the folds:
 The original notebooks inserted an extra step into the last two: pairs sharing an
 RNA chain were averaged together first, giving each chain equal weight rather
 than each pair. Those are still computed and land in the per-fold CSV as the
-"RNA-grouped" rows, because the published table used them — but they are worth
+"RNA-grouped" rows, because the published table used them, but they are worth
 ~0.003 and do not reconcile with the official inference results, so the summary
 table reports the per-pair convention only.
 
@@ -59,7 +59,7 @@ Runtime: roughly 30 min per dataset on one L4, a few hours on a CPU core.
 Outputs (results/<dataset>_<decoyset>/):
     swapping_test_summary.csv     the table
     swapping_test_per_fold.csv    every fold x repetition cell behind it
-    swapping_test_raw.pkl         per-pair scores for every arm and repetition,
+    swapping_test_raw.pkl         per-pair scores for every condition and repetition,
                                   so a different aggregation needs no rerun
 """
 
@@ -104,7 +104,7 @@ from smartbind.preprocess import build_val_test_set, convert_smiles_to_pf2  # no
 HERE = Path(__file__).resolve().parent
 RESULTS_DIR = HERE / "results"
 
-# One entry per published arm: where its data, weights and folds come from.
+# One entry per published test: where its data, weights and folds come from.
 DATASETS = {
     "hariboss": {
         "data": SMARTBIND_REPO / "data" / "hariboss"
@@ -191,7 +191,7 @@ def decoyfinder_fps(ligand_name):
     """Per-ligand DecoyFinder decoys, as FP2 vectors.
 
     One file per ligand id, one SMILES per line. A ligand with no file has no
-    DecoyFinder decoys and its pair is dropped from that arm -- the notebooks did
+    DecoyFinder decoys and its pair is dropped from that test -- the notebooks did
     the same, which is why the DecoyFinder n is smaller than the PDB n.
     """
     path = DECOYFINDER_DIR / f"{ligand_name}.txt"
@@ -468,12 +468,12 @@ def run(cfg, args, decoy_set, device):
     for row in per_fold:
         for metric in DETAIL_METRICS:
             detail.append({"fold": row["fold"], "n_pairs": row["n_pairs"],
-                           "metric": METRIC_LABEL[metric], "arm": "without swapping",
+                           "metric": METRIC_LABEL[metric], "condition": "without swapping",
                            "repetition": "", "value": round(row["original"][metric], 6)})
             for test in ("rna_swap", "ligand_swap"):
                 for k, m in enumerate(row[test], start=1):
                     detail.append({"fold": row["fold"], "n_pairs": row["n_pairs"],
-                                   "metric": METRIC_LABEL[metric], "arm": test,
+                                   "metric": METRIC_LABEL[metric], "condition": test,
                                    "repetition": k, "value": round(m[metric], 6)})
     with open(args.out_dir / "swapping_test_per_fold.csv", "w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(detail[0]))

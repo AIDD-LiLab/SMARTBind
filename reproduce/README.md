@@ -3,6 +3,11 @@
 The detailed reproducibility pipelines and the corresponding links are listed
 below.
 
+The inference and benchmark scripts run from the released weights and datasets. The
+figure notebooks redraw the published panels from the numeric values behind them, which
+are reported in the paper rather than distributed as files; use the inference scripts to
+regenerate those values.
+
 ## Fig. 2a, Supplementary Fig. 17a, and Supplementary Fig. 5c-d
 
 Scripts for reproducing benchmark performance on the RNAmigos1 10-fold
@@ -10,14 +15,14 @@ random-split dataset and figure panels, together with the corresponding
 swapping-test experiments:
 
 - [Fig. 2a and Supplementary Fig. 17a figures](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/supplementary/other_figures/rnamigos1_benchmark.py)
-  — `python rnamigos1_benchmark.py`; draws both panels from `raw_data/` and checks every bar
-  against the shipped summary tables. No weights, no inference
+  — `python rnamigos1_benchmark.py`; redraws both panels and checks every bar against the
+  summary tables. No weights, no inference
 - [RNAmigos1 10-fold benchmark](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/supplementary/other_figures/rnamigos1_benchmark.py)
   — `python benchmark_10fold.py --dataset rnamigos1`; re-derives the per-binder rank
   percentiles from the released checkpoints and checks them against the published means
 - [Swapping tests](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/supplementary/other_figures/swapping_test.py)
-  — `python swapping_test.py --dataset rnamigos1 --decoy-set both`; runs both the RNA and the
-  ligand arm and writes the per-fold and summary tables. 
+  — `python swapping_test.py --dataset rnamigos1 --decoy-set both`; runs the RNA- and
+  ligand-swapping tests and writes the per-fold and summary tables. 
 
 ## Supplementary Fig. 5a-b
 
@@ -35,14 +40,12 @@ cross-validation dataset using DecoyFinder- and DeepCoy-generated decoys:
   — `python decoyfinder_deepcoy_inference.py`; needs only the 10-fold pickle, the decoy
   libraries in `data/decoys/` and `SMARTBind_weight/`, and checks itself against the
   published values
-- [Fig. 2b figure](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig2/figure2b.ipynb) — draws the panel from
-  `raw_data/Fig2/`
+- [Fig. 2b figure](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig2/figure2b.ipynb) — redraws the panel
 
 ## Fig. 2c-e and Supplementary Fig. 4a-c
 Scripts for reproducing benchmark performance on the HARIBOSS 5-fold cross-validation datasets.
 
-- [Fig. 2c-e figures](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig2/figure2cde.ipynb) — draws the three panels
-  from `raw_data/Fig2/`
+- [Fig. 2c-e figures](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig2/figure2cde.ipynb) — redraws the three panels
 - [HARIBOSS 5-fold cross-validation inference](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig2/performance_reproduce_5fd_hariboss.py)
   — `python performance_reproduce_5fd_hariboss.py`; runs all ten split/weight pairs,
   prints both the per-sample (Fig. 2c) and fold-wise (Fig. 2d) summaries and checks
@@ -70,8 +73,7 @@ figure panels:
 - [Temporal-set binding prediction](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig3/temporal_set_binding_prediction.ipynb)
   — applies the released 10-model ensemble zero-shot to the 34 complexes and
   reports the per-case AUROC
-- [Fig. 3a-d figures](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig3/figure3.ipynb) — draws the four panels
-  from `raw_data/Fig3/`
+- [Fig. 3a-d figures](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig3/figure3.ipynb) — redraws the four panels
 - [Binding-site case visualization](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/supplementary/other_figures/binding_site_by_case_visualization.ipynb)
 
 ## Fig. 4
@@ -80,8 +82,7 @@ Scripts and outputs for reproducing virtual-screening performance on the
 time-dependent test set and the corresponding figure panels:
 
 - [Time-dependent virtual screening](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig4/time_dependent_vs.ipynb)
-- [Fig. 4b, g-j figures](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig4/figure4.ipynb) — draws the panels
-  from `raw_data/Fig4/`
+- [Fig. 4b, g-j figures](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig4/figure4.ipynb) — redraws the panels
 - [Time-dependent ranking scores](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig4/ranking_percentile_scores.txt)
 - [Case-study ranking scores](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig4/case_study_ranking_percentile_scores.txt)
 - [Fig. 4c / 4e case-study screening](https://github.com/AIDD-LiLab/SMARTBind/blob/main/reproduce/fig4/case_study_vs.py)

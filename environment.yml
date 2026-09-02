@@ -1,8 +1,7 @@
 # SMARTBind runtime environment.
 #
 # Versions are those of the environment in which the reproduction notebooks and
-# scripts in `reproduce/` were last run end to end; see environment.lock.yml for a
-# full byte-level export of that environment.
+# scripts in `reproduce/` were last run end to end.
 #
 #   conda env create -f environment.yml
 #   conda activate SMARTBind_env

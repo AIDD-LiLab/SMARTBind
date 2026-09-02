@@ -83,14 +83,17 @@ mkdir -p ~/.cache/torch/hub/checkpoints
 ```
 
 ## Inference with SMARTBind
-Download the pretrained SMARTBind models from [Zenodo](https://zenodo.org/records/22185571)
-and unpack `SMARTBind_weight.zip` at the repository root:
+Download `SMARTBind_dataset.zip` from [Zenodo](https://zenodo.org/records/22185571)
+(DOI [10.5281/zenodo.22185571](https://doi.org/10.5281/zenodo.22185571)). It holds one
+archive per input; the pretrained ensemble is `SMARTBind_weight.zip`. Unpack it into
+`SMARTBind_weight/` at the repository root:
 
 ```bash
+unzip SMARTBind_dataset.zip                       # -> SMARTBind_dataset/
 mkdir SMARTBind_weight
 cd SMARTBind_weight
-unzip SMARTBind_weight.zip
-rm SMARTBind_weight.zip
+unzip ../SMARTBind_dataset/SMARTBind_weight.zip   # -> fold1.pth .. fold10.pth
+cd ..
 ```
 
 ### Binding score prediction and virtual screening
@@ -230,9 +233,20 @@ notebooks.
 
 ## Training Dataset
 ### Preprocessed Dataset
-The processed dataset used for this work can be downloaded from the [Zenodo](https://zenodo.org/records/22185571), including 10-fold RNAmigos1 random split training dataset, 10-fold HARIBOSS random split training dataset, all the splits for HARIBOSS training datasets, all the splits for the GerNA-Bind subset of the HARIBOSS training datasets.
+The processed dataset used for this work can be downloaded from the [Zenodo](https://zenodo.org/records/22185571) record above, inside `SMARTBind_dataset.zip`: the 10-fold RNAmigos1 random split, the 10-fold HARIBOSS random split, all the splits for the HARIBOSS training datasets, and all the splits for the GerNA-Bind subset of them.
 
-To pretraining the model, please download the dataset and put it in the `data` folder.
+Unpack them into `data/`, where the training and reproduction scripts look for them:
+
+```bash
+unzip "SMARTBind_dataset/10-fold cross-validation.zip"
+unzip "SMARTBind_dataset/5-fold cross-validations.zip"
+unzip "SMARTBind_dataset/5-fold cross-validations gbsubset.zip"
+mkdir -p data/hariboss/subset data/rnamigos
+mv "10-fold cross-validation/hariboss_10fd_with_decoys.pkl" data/hariboss/
+mv "10-fold cross-validation/rnamigos_10fd_with_decoys.pkl" data/rnamigos/
+mv "5-fold cross-validations"/*.pkl                          data/hariboss/
+mv "5-fold cross-validations gbsubset"/*.pkl                 data/hariboss/subset/
+```
 
 ## Train the SMARTBind from Scratch
 For training SMARTBind model, there are two stages of training. The binding score model is trained from 

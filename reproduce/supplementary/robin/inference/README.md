@@ -48,7 +48,7 @@ inference/
 | binders per target | 54–292 | **54–291** | |
 
 See `../leakage/README.md` for how each exclusion was decided. Ligand SMILES are used
-exactly as released — they are **not** re-canonicalised here, because OpenBabel FP2 is
+exactly as released. They are **not** re-canonicalised here, because OpenBabel FP2 is
 computed from the SMILES string.
 
 ## Method

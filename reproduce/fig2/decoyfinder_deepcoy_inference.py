@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """SMARTBind on the HARIBOSS 10-fold random split against the DecoyFinder and DeepCoy
-decoy libraries — the numbers behind Fig. 2b and Supplementary Table 1.
+decoy libraries. These are the numbers behind Fig. 2b and Supplementary Table 1.
 
 Everything is derived from two inputs that ship with the paper; there are no
 intermediate files to obtain:
@@ -18,8 +18,8 @@ The evaluation set is built from the pickle alone:
 De-duplication matters: several PDB entries can carry the same RNA sequence with the
 same ligand, and SMARTBind scores those identically, so counting them more than once
 would silently weight the frequent complexes. Intersecting the 577 pairs with each
-decoy library — a ligand is only scorable if the library generated decoys for it —
-gives the n quoted in the figure caption:
+decoy library, since a ligand is only scorable if the library generated decoys for
+it, gives the n quoted in the figure caption:
 
     DecoyFinder      181 ligands covered  ->  336 pairs
     DeepCoy-DUD-E    254 ligands covered  ->  429 pairs
@@ -182,8 +182,8 @@ def main():
     table = pd.DataFrame(rows)
     table.to_csv(args.out, index=False)
     print(f"\n[OUT] {args.out}  ({len(table):,} pairs)")
-    print("      same schema as raw_data/Fig2/Fig2b_rank_percentile_per_pair.csv, so these "
-          "rows\n      can replace its SMARTBind rows and figure2b.ipynb will redraw from them.")
+    print("      one row per RNA-ligand pair and decoy library; figure2b.ipynb redraws "
+          "Fig. 2b\n      from a table in this schema.")
 
     print("\n--- Mean rank percentile ---")
     print(f"{'library':<16}{'n':>6}{'mean':>10}{'s.d.':>10}{'median':>10}"

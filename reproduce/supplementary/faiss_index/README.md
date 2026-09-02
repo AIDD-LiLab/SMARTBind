@@ -7,26 +7,22 @@ library of small molecules. The implementation details are within this tutorial.
 
 ## Installation
 
-FAISS is not part of `environment.yml` — it is only needed for this optional pipeline.
-Add it to the SMARTBind environment with:
-
-```bash
-conda activate SMARTBind_env
-conda install -y -c pytorch -c nvidia faiss-gpu=1.9.0 mkl mkl-service
-```
+`environment.yml` already pins `faiss-gpu=1.7.3`, so a standard install covers this
+pipeline. If that build will not solve on your platform, swap in `faiss-cpu`; every other
+panel is unaffected either way.
 
 ## Workflow
 
 ### Step 1: Build FAISS Index (One-time Setup)
 
 Use `bash build_faiss_index.sh` to pre-compute embeddings for your ligand library and build
-the FAISS indexes. The library is a text file with one SMILES per line — the paper used the
+the FAISS indexes. The library is a text file with one SMILES per line. The paper used the
 1M ChemSpace sample from the Zenodo record. Point `SMILES_PATH` at yours, or call
 `build_faiss_index.py --smiles <file>` directly. Needs a GPU and `SMARTBind_weight/`.
 
 Fig. 4b is a throughput benchmark over a 10-million-vector index, built by replicating that
 1M library ten times (`REPLICATE=10`); search cost depends on how many vectors the index
-holds, not on how many are distinct. For real screening leave `REPLICATE` at 1 — a
+holds, not on how many are distinct. For real screening leave `REPLICATE` at 1; a
 replicated index returns each hit ten times.
 
 **Output files:**
@@ -72,5 +68,5 @@ Rank    Ligand_Index    Binding_Score
 ```
 
 **Output files:** the step-1 metadata pickle records `checkpoint_names`, `embedding_dim`,
-`num_models` and `num_ligands` — not the SMILES themselves; map indices back through your
+`num_models` and `num_ligands`, not the SMILES themselves. Map indices back through your
 own library file.

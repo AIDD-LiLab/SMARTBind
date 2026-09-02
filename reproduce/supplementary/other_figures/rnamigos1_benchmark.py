@@ -3,8 +3,8 @@
 10-fold random split.
 
 Replaces the notebook of the same name, which read four pickles from a `rnamigos1_swap/`
-directory that is not part of the release.  The same per-binder values ship as Source Data,
-so this reads `raw_data/` and runs from a clean clone with no weights and no inference.
+directory that is not part of the release.  This reads the per-binder values directly and
+needs no weights and no inference.
 
   Fig. 2a                SMARTBind vs RNAmigos1, two screening libraries
   Supplementary Fig. 17a the same plus SMARTBind-noAug
@@ -36,8 +36,8 @@ def find_raw_data():
             return folder / "raw_data"
     raise SystemExit(
         "\nCould not find `raw_data/`.\n\n"
-        "Download the Source Data archive from the link given in the repository\n"
-        "README and unpack it at the repository root, next to `smartbind/`.\n")
+        "The raw data is not provided with the release. Reproduce the underlying\n"
+        "numbers with the inference scripts.\n")
 
 
 def series(per_binder, model):
